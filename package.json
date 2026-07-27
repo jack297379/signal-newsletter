@@ -1,0 +1,19 @@
+{
+  "name": "signal",
+  "version": "1.0.0",
+  "description": "Weekly culture data aggregation for Word of Life Fellowship's Signal newsletter",
+  "main": "run.js",
+  "type": "module",
+  "scripts": {
+    "start": "node run.js",
+    "test": "node test-template.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "cheerio": "^1.2.0",
+    "dotenv": "^17.4.2",
+    "node-fetch": "^3.3.2"
+  }
+}
