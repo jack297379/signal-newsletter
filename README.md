@@ -1,21 +1,25 @@
 # Signal — Weekly Data Aggregation Script
 
-Automates the weekly data pull for Word of Life Fellowship's Signal newsletter.
-Replaces the manual Gemini-prompt workflow used during the pilot.
+Automates the weekly data pull for Word of Life Fellowship's Signal newsletter —
+a youth-culture briefing covering movies/TV, music, gaming, podcasts, and
+social trends. Replaces the manual Gemini-prompt workflow used during the
+pilot.
 
-## Status: written and syntax-checked, NOT yet tested against live APIs
+## Status: tested against live APIs, in active weekly use
 
-Every file here has been verified to:
-- Install cleanly (`npm install` succeeded, 0 vulnerabilities)
-- Parse as valid JavaScript (`node --check` passed on every file)
-- Produce correctly-formatted output when tested with mock data
-  (the template builder logic is fully verified)
+This is not a prototype — it has produced multiple real weekly issues against
+live data, with real bugs found and fixed along the way (see "Design notes"
+below). All 10 sources are currently working correctly:
 
-What has **not** been tested: any live network call to TMDB, Spotify, YouTube,
-Steam, Apple, Reddit, or the podcast charts site. That requires a real API
-key and a real internet connection — neither was available in the sandbox
-this was built in. **This is the first thing to do when you open this in
-Claude Code.**
+- **TMDB** (movies/TV trending), **Apple Music**, **Christian Songs**
+  (Billboard, with a PopVortex fallback), **Steam**, **Apple App Store**
+  (games + all-apps charts), **YouTube** (trending), **Apple Podcasts**,
+  **Reddit** (r/teenagers, r/GenZ, r/TikTokCringe)
+
+A **Data QA pass** (`qa.js`) runs automatically before the draft is built,
+flagging duplicate entries and known parsing-artifact patterns even on
+sources that reported success — this has caught real bugs (see below) that
+a simple pass/fail check would have missed.
 
 ## Setup
 
@@ -24,59 +28,108 @@ npm install
 cp .env.example .env
 ```
 
-Then fill in `.env` with three free API keys:
-1. **TMDB** — themoviedb.org → Settings → API (instant approval)
-2. **YouTube Data API v3** — console.cloud.google.com → enable the API → create an API key
-3. **Spotify** — developer.spotify.com/dashboard → Create App → copy Client ID + Secret
+Then fill in `.env` with two free API keys:
+1. **TMDB** — themoviedb.org → Settings → API (instant approval) — use the
+   **v3 API Key**, not the longer v4 Read Access Token.
+2. **YouTube Data API v3** — console.cloud.google.com → enable the API →
+   create an API key (restrict it to YouTube Data API v3; "Public data",
+   not "User data")
 
-No key needed for Billboard/PopVortex, Steam, Apple, Reddit, or podcast charts.
+No key needed for Billboard/PopVortex, Steam, Apple (Music/Games/Apps/Podcasts),
+or Reddit — all use public endpoints with no authentication required.
 
 ## Run it
 
+**Step 1 — pull the data:**
 ```bash
 npm start
 ```
+Pulls all 10 sources, runs the Data QA pass, and writes `output/YYYY-MM-DD.md`
+with a per-source success/failure summary printed to the console. Open the
+draft — it starts with a **Data QA** section, then the real pulled data, then
+three sections marked `> EDITOR:` for the human editor to complete (a social
+trend write-up, five podcast picks with one-line descriptions, and a
+one-sentence ministry angle tying a cultural moment to youth ministry).
 
-This pulls all 10 sources in parallel, writes `output/YYYY-MM-DD.md`, and
-prints a per-source success/failure summary to the console.
+**Step 2 — generate the branded HTML** once the editor's copy is locked in:
+edit `build-branded.js` with this week's real data plus the editor's picks,
+then:
+```bash
+node build-branded.js
+```
+`template/build-html.js` is a real code template (not a generative design
+tool) that renders a WOL Fellowship–branded HTML email — numbered section
+badges, italic subheads, styled callouts for the editor's picks. It has a
+structural guardrail: it throws an error if a podcast pick doesn't exactly
+match a real entry in that week's chart, so a fabricated pick can't
+accidentally get rendered.
 
-## Design notes — why these specific sources were chosen
+## Design notes — real bugs found and fixed, not just design choices
 
-**Spotify** uses the official Web API against Spotify's own editorial
-"Top 50 - Global" playlist (ID `37i9dQZEVXbMDoHDwVN2tF`), not a scrape of
-charts.spotify.com. The scraped version produced unreliable/reordered
-results across three separate pilot runs with Gemini — this should fix that,
-since it's pulling structured data from Spotify's actual API rather than
-parsing a JS-rendered page.
+**Apple Music** replaced an earlier Spotify-based design. Spotify's
+Client Credentials OAuth flow can no longer read Spotify-owned editorial
+playlists (a November 2024 platform policy change restricts this for apps in
+Development Mode) — no `.env` value fixes this, it's a Spotify-side
+restriction. Apple's public Top Songs RSS feed is free, unauthenticated, and
+was already the most reliable source in every prior test.
 
-**YouTube** uses the official Data API with an API key — stateless, no
-browser session. The Gemini pilot's browser-based approach produced an
-identical "trending" list two weeks in a row, which strongly suggested it
-wasn't a genuine live pull. This should be a real fix since there's no
-session/personalization involved.
+**Podcast charts** replaced an earlier attempt to scrape byspotify.com's
+chart page. That page is a JS-rendered React app — a plain `fetch` only
+returns the empty pre-render shell, so the scraper silently returned zero
+results without ever throwing an error. Apple's official Top Podcasts JSON
+feed (`rss.marketingtools.apple.com`) replaced it — free, unauthenticated,
+same reliable pattern as the other Apple sources.
 
-**Billboard Christian Songs** tries Billboard directly first, then falls
-back to PopVortex's iTunes Christian & Gospel chart if Billboard's paywall
-blocks it (which it did during the pilot). The fallback is a real, working,
-free source — confirmed during testing.
+**Billboard Christian Songs** had a real parsing bug: the artist field was
+briefly picking up chart-movement badges ("RE-ENTRY", "NEW") instead of the
+real artist name, because those badges share the same CSS class as the rank
+number on rows with a movement badge. Fixed by matching the artist span's
+unique class combination instead of its position in the row.
 
-**Steam** uses the public `featuredcategories` JSON endpoint instead of
-scraping the topsellers HTML page — same data, more stable format.
+**Steam** had duplicate entries in its own API response (not a scraping bug —
+confirmed via direct API inspection that Steam's `featuredcategories`
+endpoint returns literal duplicate item IDs for some entries). Deduped
+client-side by ID.
 
-**Apple, Reddit** are unchanged from the pilot — both were reliable
-throughout and use native JSON/RSS, no scraping.
+**Reddit** went through two full rebuilds. The original OAuth (Client
+Credentials) design got stuck on Reddit's app-creation form silently failing —
+root cause was Reddit closing self-serve OAuth app registration in November
+2025 in favor of an approval-request process (the "Responsible Builder
+Policy"), not an account-karma issue as first suspected. Rebuilt on Reddit's
+public Atom RSS feeds (`/r/<sub>/.rss`) instead — no auth, no app, no
+approval needed. RSS lacks a "stickied" flag the old API had, so
+chart-position mod/announcement posts are filtered by post age instead (a
+structural proxy, not phrase-guessing) — confirmed real pinned posts were
+dated months to years old while genuine content was 1-2 days old. A shared
+keyword/content-safety filter (`sources/content-safety.js`) screens both
+Reddit and its fallback, though this is explicitly a first-pass net, not a
+substitute for the editor's review of every pick before publishing.
 
-**Podcast charts** still scrapes byspotify.com's public chart page — there's
-no clean API alternative here, so this one may need selector maintenance
-if the page structure changes.
+**YouTube comment fallback** (`sources/youtube-comments.js`): if Reddit fails
+or is rate-limited, the pipeline automatically falls back to mining top
+comments on the YouTube trending videos already pulled that run — reuses the
+existing YouTube API key, adds no new credentials or failure points. Not a
+like-for-like replacement for Reddit's discussion threads, but a genuine
+"what are real people saying" signal tied directly to content already in the
+newsletter. Has its own quality filters (rejects spam/promotional comments
+and blank-line-padded troll comments) on top of the shared content-safety
+screen.
 
-## Known limitation to verify first
+## Known limitations
 
-The CSS selectors in `sources/billboard.js` (fallback) and
-`sources/podcasts.js` are best-effort based on typical page structure —
-they have NOT been verified against the live rendered HTML, since this
-sandbox can't reach those sites. **First task in Claude Code: run this,
-see what breaks, and fix selectors against the actual live pages.**
+- **Reddit's RSS feed rate-limits** on rapid repeated requests, though it
+  recovers within roughly a minute and is a non-issue at the actual once-a-week
+  production cadence. The YouTube comment fallback covers any week it doesn't.
+- The keyword/content-safety filter is a first-pass screen, not a complete
+  solution — some categories of inappropriate content (e.g. a disturbing
+  personal anecdote) share no vocabulary with anything keyword-blockable.
+  The editor reviews every Social Pulse candidate before publishing, by
+  design, and this will always be necessary regardless of how the filter
+  list grows.
+- Billboard and the Apple podcast feed are the two "scrapes a real page"
+  sources most likely to need selector maintenance if either site's HTML
+  structure changes — TMDB/YouTube/Steam/Apple RSS are official APIs and
+  shouldn't break the same way.
 
 ## If a source fails
 
@@ -84,7 +137,10 @@ see what breaks, and fix selectors against the actual live pages.**
 caught, logged to the console, and surfaced in the draft's Agent Notes
 section so the editor knows to check that section manually.
 
-## Next steps after this works
+## Next steps
 
-- Add a cron job (`0 7 * * 1 ...`) to run this automatically every Monday
-- Point the output at wherever the editor actually works from (email, shared doc, etc.)
+- Register Signal as a formally-tracked project (pending an internal
+  decision on which division/team owns it)
+- Add a cron job to run this automatically every Monday
+- Point the output at wherever the editor actually works from (email, shared
+  doc, etc.)
