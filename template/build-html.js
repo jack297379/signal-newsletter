@@ -140,7 +140,7 @@ function podcastPickCard(name, blurb, isLast) {
  *   `data.podcasts` — throws if not, to make fabricated picks structurally
  *   impossible rather than relying on a prompt asking nicely.
  * @param {string} data.ministryAngle - the editor's one-sentence tie-in.
- * @param {{title: string, blurb: string}|null} data.socialPick - null while
+ * @param {{title: string, blurb: string, source?: string}|null} data.socialPick - null while
  *   Reddit is down / no real trend chosen; an object once there's a real one.
  * @param {string|null} data.logoUrl - a real, publicly hosted image URL (e.g.
  *   Pardot's image library) for the WOL logo. REQUIRED for an actual email
@@ -185,7 +185,7 @@ export function buildBrandedHtml(data) {
     ? `
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${COLORS.pickCardBg}; border-radius:8px;">
         <tr><td style="padding:20px 24px;">
-          <div style="font-family:'Helvetica Neue', Helvetica, Arial, sans-serif; font-weight:700; font-size:11px; letter-spacing:1.5px; color:${COLORS.darkBlue}; text-transform:uppercase; margin-bottom:6px;">Editor's Pick</div>
+          <div style="font-family:'Helvetica Neue', Helvetica, Arial, sans-serif; font-weight:700; font-size:11px; letter-spacing:1.5px; color:${COLORS.darkBlue}; text-transform:uppercase; margin-bottom:6px;">Editor's Pick${socialPick.source ? ` &middot; <span style="font-weight:400; letter-spacing:0; text-transform:none;">Spotted on ${escapeHtml(socialPick.source)}</span>` : ''}</div>
           <div style="font-family:'Helvetica Neue', Helvetica, Arial, sans-serif; font-weight:700; font-size:15px; color:${COLORS.darkBlue}; margin-bottom:6px;">${escapeHtml(socialPick.title)}</div>
           <div style="font-family:Arial, sans-serif; font-size:14px; color:${COLORS.ink}; line-height:1.6;">${escapeHtml(socialPick.blurb)}</div>
         </td></tr>
