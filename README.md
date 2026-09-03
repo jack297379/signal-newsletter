@@ -12,7 +12,8 @@ live data, with real bugs found and fixed along the way (see "Design notes"
 below). All 10 sources are currently working correctly:
 
 - **TMDB** (movies/TV trending), **Apple Music**, **Christian Songs**
-  (Billboard, with a PopVortex fallback), **Steam**, **Apple App Store**
+  (Billboard, with a PopVortex fallback), **Steam** (official weekly Top Sellers
+  chart, storefront feed as fallback), **Apple App Store**
   (games + all-apps charts), **YouTube** (trending), **Apple Podcasts**,
   **Reddit** (r/teenagers, r/GenZ, r/TikTokCringe)
 
@@ -144,3 +145,41 @@ section so the editor knows to check that section manually.
 - Add a cron job to run this automatically every Monday
 - Point the output at wherever the editor actually works from (email, shared
   doc, etc.)
+
+## Changes 2026-09-03 (first live run since 2026-08-05)
+
+- **Reddit was failing from Node but not from curl.** Same IP, same
+  User-Agent, 8 seconds apart: curl got 200, Node's built-in `fetch()` got
+  429 / 403 "Blocked". undici's default cross-origin headers
+  (`sec-fetch-mode`, `accept-language: *`) trip Reddit's bot screen.
+  `sources/reddit.js` now uses `fetchTextMinimal` (raw `https` module,
+  sends only the headers it is given) from `sources/http.js`. Also added one
+  65-second backoff retry for subreddits that come back 429/403, since the
+  limit is per-IP and clears in about a minute.
+- **Steam switched to the official weekly Top Sellers chart**
+  (`IStoreTopSellersService/GetWeeklyTopSellers`), the same JSON the public
+  chart page renders from. It returns 20 real games with an item type. The
+  old `featuredcategories` storefront feed is kept as the fallback. Both
+  paths now filter hardware SKUs (Steam Deck/Machine/Controller/Frame),
+  DLC/"Supporter Edition" rows (type != 0), and duplicate ids. The draft
+  labels which source produced the list.
+- **Transient 5xx retries** for the no-auth JSON feeds (Apple Music/Games/
+  Apps, Apple Podcasts, Steam) via `fetchJsonWithRetry` in `sources/http.js`.
+  Prompted by a one-off 504 from Apple's podcast feed that blanked the
+  Podcast section. 404/403/400 are not retried.
+- **Content-safety filter widened** (`sources/content-safety.js`): strong
+  profanity, slurs, and sexual-exploitation/abuse vocabulary. Prompted by a
+  YouTube comment containing "FUCKING" and an r/teenagers title about AI
+  child pornography both reaching the editor's candidate list.
+- **Reddit candidate quality:** explicit `[mod]`/`[meta]`/megathread titles
+  are dropped regardless of age, and titles with fewer than 15
+  letters/digits (emoji-only, "DAWG WHAT") are dropped.
+- **Template:** unreleased titles with no TMDB vote render as
+  "not yet rated" instead of "Score: n/a".
+- Still deliberately human-only: the Social Pulse pick, the five podcast
+  blurbs, and the Ministry Angle sentence.
+- **Politics filter** (later the same day, editorial rule from John Yarosh:
+  "Absolutely no politics"): candidate titles/comments mentioning partisan
+  figures, parties, elections, government bodies, or hot-button policy
+  topics are dropped before the editor sees them. Deliberately broad.
+

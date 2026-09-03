@@ -224,6 +224,7 @@ export function buildBrandedHtml(data) {
       </table>
       <div style="margin-top:20px; font-family:'Helvetica Neue', Helvetica, Arial, sans-serif; font-weight:700; font-size:34px; letter-spacing:1px; color:#ffffff; text-transform:uppercase;">The Signal</div>
       <div style="margin-top:4px; font-family:Arial, sans-serif; font-size:14px; color:${COLORS.lightBlue};">A weekly culture briefing for youth leaders &mdash; ${formatWeek(week)}</div>
+      <div style="margin-top:8px; font-family:Arial, sans-serif; font-size:11px; font-style:italic; color:rgba(255,255,255,0.65);">Powered by The Center for Youth Apologetics</div>
     </td>
   </tr>
 

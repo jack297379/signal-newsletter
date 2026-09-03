@@ -3,6 +3,13 @@
 // standard Signal markdown draft, matching the format used in the manual
 // Gemini pilot so the editor workflow doesn't have to change.
 
+// TMDB has no vote average yet for titles that haven't released (e.g. a
+// trailer-driven trending entry). That's expected, not an error, so render it
+// as plain words instead of a bare "n/a" that reads like a broken field.
+function scoreLabel(score) {
+  return score === 'n/a' ? 'not yet rated' : `Score: ${score}`;
+}
+
 function numberedList(items, formatter) {
   if (!items || items.length === 0) return '[Source unavailable — editor should check manually]';
   return items.map((item) => `${item.rank}. ${formatter(item)}`).join('\n');
@@ -29,6 +36,7 @@ export function buildTemplate({
   return `# The Signal — Week of ${week}
 *What teens are watching, playing, and listening to this week.*
 *Prepared for Word of Life Fellowship Communications*
+*Powered by The Center for Youth Apologetics*
 
 ---
 
@@ -41,10 +49,10 @@ ${qaWarnings && qaWarnings.length ? qaWarnings.map((w) => `- ${w}`).join('\n') :
 ## What Teens Are Watching
 
 **Popular on TMDB — Movies** *(TMDB's real weekly trending API — not the scraped "Popular" page)*
-${numberedList(movies, (m) => `${m.title} (${m.releaseYear}) — Score: ${m.score}`)}
+${numberedList(movies, (m) => `${m.title} (${m.releaseYear}) — ${scoreLabel(m.score)}`)}
 
 **Popular on TMDB — TV Shows**
-${numberedList(tv, (s) => `${s.title} — Score: ${s.score}`)}
+${numberedList(tv, (s) => `${s.title} — ${scoreLabel(s.score)}`)}
 
 **YouTube Trending (US)**
 ${numberedList(youtube, (v) => `${v.title} — ${v.channel} (${v.views} views)`)}
@@ -72,7 +80,7 @@ ${socialPulseSource === 'youtube-fallback' ? '*(Reddit was unavailable this week
 
 ## Gaming & Apps
 
-**Steam Top Sellers**
+**Steam Top Sellers** *(source: ${steam?.[0]?.source || 'unavailable'})*
 ${numberedList(steam, (g) => g.title)}
 
 **App Store Top Free Games (US)**

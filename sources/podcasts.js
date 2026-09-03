@@ -6,6 +6,8 @@
 // could never find real chart rows there, which is why it always came back
 // empty without ever throwing an error.
 
+import { fetchJsonWithRetry } from './http.js';
+
 const YOUTH_KEYWORDS = [
   'teen', 'youth', 'parent', 'family', 'gen z', 'college', 'gaming',
   'comedy', 'pop culture', 'relationship', 'faith', 'christian', 'sports',
@@ -13,11 +15,9 @@ const YOUTH_KEYWORDS = [
 
 export async function getPodcastCandidates() {
   const url = 'https://rss.marketingtools.apple.com/api/v2/us/podcasts/top/20/podcasts.json';
-  const res = await fetch(url);
-  if (!res.ok) {
-    throw new Error(`Apple podcast charts feed failed: ${res.status} ${res.statusText}`);
-  }
-  const data = await res.json();
+  // Retries transient 5xx - a one-off 504 Gateway Time-out from this feed
+  // blanked the whole Podcast section on 2026-09-03.
+  const data = await fetchJsonWithRetry(url, { label: 'Apple podcast charts feed' });
   const entries = data?.feed?.results || [];
   return entries.map((show, i) => {
     const genreNames = (show.genres || []).map((g) => g.name).join(' ');
