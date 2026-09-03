@@ -61,6 +61,11 @@ const POLITICS_PATTERNS = [
   /\b(socialis[tm]s?|communis[tm]s?|marxis[tm]s?|fascis[tm]s?|nazis?|antifa)\b/i,
   /\b(abortion|pro-life|pro-choice|roe v\.? wade|gun control|second amendment|2nd amendment|immigration|immigrants?|deportation|border wall|ice raids?|tariffs?)\b/i,
   /\b(israel|gaza|palestin(e|ian|ians)|hamas|zionis[tm]|ukraine|putin|zelensky|netanyahu)\b/i,
+  // Government / current-affairs vocabulary. A 2026-09-03 r/GenZ title about
+  // the "Lake America" / Denali / military-base renaming controversy passed
+  // the lists above; John's rule is absolute, so government and policy
+  // machinery words are blocked too, accepting some benign losses.
+  /\b(government|govt|federal|administration|executive order|legislation|lawmakers?|policy|policies|military|pentagon|renamings?|renamed|lake america|denali|gulf of america)\b/i,
 ];
 
 export function isPolitical(text) {
