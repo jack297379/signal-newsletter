@@ -113,7 +113,28 @@ async function run() {
   const outPath = `./output/${week}.md`;
   writeFileSync(outPath, draft);
 
+  // Structured copy of the same pull, so build-branded.js can render the
+  // branded HTML from real data without anyone retyping it (2026-09-03).
+  const jsonPath = `./output/${week}.json`;
+  writeFileSync(jsonPath, JSON.stringify({
+    week,
+    movies: byLabel['TMDB Movies'] || [],
+    tv: byLabel['TMDB TV'] || [],
+    youtube: byLabel['YouTube'] || [],
+    appleMusic: byLabel['Apple Music'] || [],
+    christian: byLabel['Christian Songs'] || [],
+    steam: byLabel['Steam'] || [],
+    appleGames: byLabel['Apple Games'] || [],
+    appleApps: byLabel['Apple All Apps'] || [],
+    podcasts: byLabel['Podcasts'] || [],
+    socialPulse,
+    socialPulseSource,
+    errors,
+    qaWarnings,
+  }, null, 2));
+
   console.log(`\nDraft saved to ${outPath}`);
+  console.log(`Structured data saved to ${jsonPath}`);
   if (errors.length) {
     console.log(`\n⚠️  ${errors.length} source(s) failed — check Agent Notes in the draft.`);
   }

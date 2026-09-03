@@ -1,151 +1,62 @@
 // build-branded.js
-// Generates the branded distribution HTML from this week's real pulled data
-// plus the editor's finished copy. Run after the markdown draft's three
-// EDITOR sections are locked. See template/build-html.js for why this
-// replaces the Claude Design round-trip.
+// Renders the branded distribution HTML from a week's real pulled data
+// (output/YYYY-MM-DD.json, written by run.js) plus the editor's finished copy
+// (output/YYYY-MM-DD.editor.json, written by hand). See template/build-html.js
+// for why this replaces the Claude Design round-trip.
+//
+// Usage:
+//   node build-branded.js              -> latest output/*.json
+//   node build-branded.js 2026-09-03   -> that week
+//
+// If the editor file is missing, the three human sections are rendered with
+// unmistakable [EDITOR: ...] placeholders and the podcast picks default to
+// the first five chart entries flagged youth-relevant (real names from the
+// chart, placeholder blurbs). Nothing is ever invented. Editor file shape:
+// {
+//   "socialPick":   { "title": "...", "blurb": "..." },
+//   "podcastPicks": [ { "name": "<exact chart name>", "blurb": "..." }, ... x5 ],
+//   "ministryAngle": "..."
+// }
 
-import { writeFileSync } from 'fs';
+import { readFileSync, writeFileSync, readdirSync, existsSync } from 'fs';
 import { buildBrandedHtml } from './template/build-html.js';
 
-const data = {
-  week: '2026-08-05',
-  movies: [
-    { rank: 1, title: 'Spider-Man: Brand New Day', releaseYear: '2026', score: '8.0' },
-    { rank: 2, title: 'The Odyssey', releaseYear: '2026', score: '8.0' },
-    { rank: 3, title: 'Supergirl', releaseYear: '2026', score: '6.7' },
-    { rank: 4, title: 'Obsession', releaseYear: '2026', score: '8.2' },
-    { rank: 5, title: 'Evil Dead Burn', releaseYear: '2026', score: '7.8' },
-    { rank: 6, title: "The Devil's Mouth", releaseYear: '2026', score: '6.5' },
-    { rank: 7, title: 'Backrooms', releaseYear: '2026', score: '7.1' },
-    { rank: 8, title: 'Disclosure Day', releaseYear: '2026', score: '7.4' },
-    { rank: 9, title: 'Avatar Aang: The Last Airbender', releaseYear: '2026', score: '9.3' },
-    { rank: 10, title: 'Soulm8te', releaseYear: '2026', score: '6.5' },
-  ],
-  tv: [
-    { rank: 1, title: 'Mystic Nine', score: '6.3' },
-    { rank: 2, title: 'House of the Dragon', score: '8.4' },
-    { rank: 3, title: 'Ted Lasso', score: '8.3' },
-    { rank: 4, title: 'Lioness', score: '8.0' },
-    { rank: 5, title: 'Silo', score: '8.2' },
-    { rank: 6, title: 'Futurama', score: '8.4' },
-    { rank: 7, title: 'Bleach', score: '8.4' },
-    { rank: 8, title: 'One Piece', score: '8.7' },
-    { rank: 9, title: 'Star Wars: Visions Presents - The Ninth Jedi', score: 'n/a' },
-    { rank: 10, title: 'Lucky', score: '7.4' },
-  ],
-  youtube: [
-    { rank: 1, title: 'Pooh Shiesty - Last Man Breathin (Official Audio)', channel: 'Pooh Shiesty', views: '37,310' },
-    { rank: 2, title: 'The Hood: The World is His | Character Reveal Trailer', channel: 'Marvel Rivals', views: '1,551,468' },
-    { rank: 3, title: 'Face the Unknown', channel: 'HELLDIVERS 2', views: '373,848' },
-    { rank: 4, title: 'Morning Dew (Donk) Remix (Explicit)', channel: 'Beyonce - Topic', views: '90,214' },
-    { rank: 5, title: 'The Dukes of Hazzard (2027) - Concept Trailer', channel: 'Ultimate Studios', views: '65,366' },
-    { rank: 6, title: 'Weezer - C.E.O. (Official Music Video)', channel: 'weezer', views: '46,856' },
-    { rank: 7, title: 'Return To Minecraft ft. iShowSpeed & Kai (official trailer)', channel: 'IShowSpeed', views: '620,716' },
-    { rank: 8, title: 'We Opened A Totally Normal Burger Restaurant', channel: 'SMii7Yplus', views: '1,199,343' },
-    { rank: 9, title: 'Thomasville Days', channel: 'Fatt Smaxk - Topic', views: '32,105' },
-  ],
-  appleMusic: [
-    { rank: 1, title: "Choosin' Texas", artist: 'Ella Langley' },
-    { rank: 2, title: 'Boston', artist: 'STELLA LEFTY' },
-    { rank: 3, title: 'C.E.O.', artist: 'Weezer' },
-    { rank: 4, title: 'Been By Now', artist: 'Morgan Wallen' },
-    { rank: 5, title: "I Can't Love You Anymore", artist: 'Ella Langley & Morgan Wallen' },
-    { rank: 6, title: 'Be Her', artist: 'Ella Langley' },
-    { rank: 7, title: 'Dai Dai', artist: 'Shakira & Burna Boy' },
-    { rank: 8, title: "I'm Still Fine", artist: 'The Red Clay Strays' },
-    { rank: 9, title: 'I Knew It, I Knew You (From "Toy Story 5")', artist: 'Taylor Swift' },
-    { rank: 10, title: 'you look like you love me', artist: 'Ella Langley & Riley Green' },
-  ],
-  christian: [
-    { rank: 1, title: 'Washed', artist: 'Elevation Rhythm' },
-    { rank: 2, title: "God I'm Just Grateful", artist: 'Elevation Worship & Chandler Moore' },
-    { rank: 3, title: 'Demons', artist: 'Josiah Queen' },
-    { rank: 4, title: 'OKAY!', artist: 'Forrest Frank' },
-    { rank: 5, title: 'AMAZING!', artist: 'Elevation Rhythm & Josiah Queen' },
-    { rank: 6, title: 'Left It In The River', artist: 'Jamie MacDonald' },
-    { rank: 7, title: 'Worthy Of It All (Worthy)', artist: 'CeCe Winans' },
-    { rank: 8, title: 'Where Would I Be', artist: 'Peter Burton' },
-    { rank: 9, title: 'Thankful', artist: 'Forrest Frank' },
-    { rank: 10, title: 'Good', artist: 'Matthew West' },
-  ],
-  steam: [
-    { rank: 1, title: 'Steam Machine' },
-    { rank: 2, title: 'Big Walk' },
-    { rank: 3, title: 'Big Walk and PEAK' },
-    { rank: 4, title: 'MARVEL Tokon: Fighting Souls' },
-    { rank: 5, title: 'Steam Deck' },
-    { rank: 6, title: 'Gears of War: E-Day' },
-  ],
-  appleGames: [
-    { rank: 1, name: 'Block Out! - Color Sort Puzzle', developer: 'Grand Games A.Ş.' },
-    { rank: 2, name: 'Smash Fest!', developer: 'Flow Games Bilisim Yazilim ve Pazarlama A.Ş.' },
-    { rank: 3, name: 'Meowdoku!', developer: 'Oakever Games' },
-    { rank: 4, name: 'Bus Traffic Fever!', developer: 'GOODROID, Inc.' },
-    { rank: 5, name: 'Magic Sort!', developer: 'Grand Games A.Ş.' },
-    { rank: 6, name: 'Roblox', developer: 'Roblox Corporation' },
-    { rank: 7, name: 'Vita Mahjong', developer: 'Vita Studio' },
-    { rank: 8, name: 'Block Blast!', developer: 'Hungry Studio' },
-    { rank: 9, name: '82-0.com', developer: 'Vaulty Studios Inc.' },
-    { rank: 10, name: 'Township', developer: 'Playrix' },
-  ],
-  appleApps: [
-    { rank: 1, name: 'TikTok Pro - Events', category: 'Entertainment', developer: 'TikTok Ltd.' },
-    { rank: 2, name: 'ChatGPT', category: 'Productivity', developer: 'OpenAI OpCo, LLC' },
-    { rank: 3, name: 'Capital One Mobile', category: 'Finance', developer: 'Capital One' },
-    { rank: 4, name: 'ParentSquare', category: 'Education', developer: 'ParentSquare' },
-    { rank: 5, name: 'DealSeek: Coupons & Discounts', category: 'Shopping', developer: 'DealSeek LLC' },
-    { rank: 6, name: 'X', category: 'News', developer: 'X Corp.' },
-    { rank: 7, name: 'Vinted: Pre-loved marketplace', category: 'Shopping', developer: 'Vinted Limited' },
-    { rank: 8, name: 'Threads', category: 'Social Networking', developer: 'Instagram, Inc.' },
-    { rank: 9, name: 'WhatsApp Messenger', category: 'Social Networking', developer: 'WhatsApp Inc.' },
-    { rank: 10, name: 'Depop - Buy & Sell Clothes', category: 'Shopping', developer: 'Depop Ltd' },
-    { rank: 11, name: 'Google', category: 'Utilities', developer: 'Google' },
-    { rank: 12, name: 'Gmail - Email by Google', category: 'Productivity', developer: 'Google' },
-    { rank: 13, name: 'Claude by Anthropic', category: 'Productivity', developer: 'Anthropic PBC' },
-    { rank: 14, name: 'Microsoft Authenticator', category: 'Productivity', developer: 'Microsoft Corporation' },
-    { rank: 15, name: 'Netflix Game Controller', category: 'Entertainment', developer: 'Netflix, Inc.' },
-    { rank: 16, name: 'Google Gemini', category: 'Productivity', developer: 'Google' },
-    { rank: 17, name: 'TikTok - Videos, Shop & LIVE', category: 'Entertainment', developer: 'TikTok Ltd.' },
-    { rank: 18, name: 'CapCut: Photo & Video Editor', category: 'Photo & Video', developer: 'Bytedance Pte. Ltd' },
-    { rank: 19, name: 'Freecash - Get Paid Real Money', category: 'Entertainment', developer: '256 REWARDS LTD' },
-    { rank: 20, name: 'Google Maps', category: 'Navigation', developer: 'Google' },
-  ],
-  podcasts: [
-    { rank: 1, name: 'The Daily' },
-    { rank: 2, name: 'Crime Junkie' },
-    { rank: 3, name: 'Dateline NBC' },
-    { rank: 4, name: 'The Joe Rogan Experience' },
-    { rank: 5, name: 'Mick Unplugged' },
-    { rank: 6, name: 'Up First from NPR' },
-    { rank: 7, name: 'Pardon My Take' },
-    { rank: 8, name: 'Morbid' },
-    { rank: 9, name: 'REAL AF with Andy Frisella' },
-    { rank: 10, name: 'Pod Save America' },
-    { rank: 11, name: 'Good Hang with Amy Poehler' },
-    { rank: 12, name: 'The Shawn Ryan Show' },
-    { rank: 13, name: 'Unblinded with Sean Callagy' },
-    { rank: 14, name: 'The Dylan Gemelli Podcast' },
-    { rank: 15, name: 'The Bill Simmons Podcast' },
-    { rank: 16, name: 'Habits and Hustle' },
-    { rank: 17, name: 'The Megyn Kelly Show' },
-    { rank: 18, name: 'Young and Profiting with Hala Taha (Entrepreneurship, Sales, Marketing)' },
-    { rank: 19, name: 'The Ezra Klein Show' },
-    { rank: 20, name: 'The Vault Unlocked' },
-  ],
-  podcastPicks: [
-    { name: 'The Joe Rogan Experience', blurb: 'Long-form interview show, MMA to comedy to fringe science - massively followed by teen guys.' },
-    { name: 'Pardon My Take', blurb: 'Sports comedy from Barstool Sports, popular with teen guys.' },
-    { name: 'Morbid', blurb: 'True crime told in a casual, comedic style - most-listened among teen/young-adult women.' },
-    { name: 'Good Hang with Amy Poehler', blurb: 'Celebrity friends chatting, warm and silly, low-drama.' },
-    { name: 'The Bill Simmons Podcast', blurb: 'Sports and pop culture commentary from a major media veteran - a staple for teen guys who follow both.' },
-  ],
-  ministryAngle: "This week's Christian chart has a brand-new entry, \"AMAZING!,\" pairing Elevation Rhythm and Josiah Queen - two artists who already independently top the chart - teaming up on one track. Worth mentioning to students as a real example of artists choosing collaboration over competition.",
-  socialPick: {
-    title: 'AI-Generated Trailer Backlash',
-    blurb: "A fake \"concept trailer\" for a Dukes of Hazzard reboot, generated entirely by AI, is getting called out hard in the comments - viewers are frustrated it can't even get basic details right (the car, a mailbox) and are increasingly vocal about AI-generated content flooding their YouTube feed. It's a sign that even casual scrollers are getting sharper at spotting what's real versus generated, and starting to resent the flood of it. Ask a student: how do you decide what's worth trusting online, and does it bother you when something's fake but well-made?",
-  },
-};
+const arg = process.argv[2];
+const week = arg || readdirSync('./output')
+  .filter((f) => /^\d{4}-\d{2}-\d{2}\.json$/.test(f))
+  .sort()
+  .pop()
+  ?.replace('.json', '');
+if (!week) {
+  console.error('No output/YYYY-MM-DD.json found. Run `npm start` first.');
+  process.exit(1);
+}
 
-const html = buildBrandedHtml(data);
-writeFileSync('./output/2026-08-05-design.html', html);
-console.log('Branded HTML written to ./output/2026-08-05-design.html');
+const dataPath = `./output/${week}.json`;
+const editorPath = `./output/${week}.editor.json`;
+const data = JSON.parse(readFileSync(dataPath, 'utf8'));
+
+let editor = null;
+if (existsSync(editorPath)) {
+  editor = JSON.parse(readFileSync(editorPath, 'utf8'));
+} else {
+  console.warn(`No ${editorPath} - rendering with [EDITOR: ...] placeholders. This is a layout proof, not a sendable issue.`);
+}
+
+const flagged = data.podcasts.filter((p) => p.flagged);
+const defaultPicks = (flagged.length >= 5 ? flagged : data.podcasts).slice(0, 5)
+  .map((p) => ({ name: p.name, blurb: '[EDITOR: one-line blurb - why this show matters for teens]' }));
+
+const html = buildBrandedHtml({
+  ...data,
+  podcastPicks: editor?.podcastPicks || defaultPicks,
+  ministryAngle: editor?.ministryAngle || '[EDITOR: one sentence connecting a cultural moment above to a youth ministry application]',
+  socialPick: editor?.socialPick || {
+    title: '[EDITOR: trend name]',
+    blurb: '[EDITOR: 2-3 sentences - what the trend is, why teens care, and one question a youth worker could ask about it]',
+  },
+});
+
+const outPath = `./output/${week}-design.html`;
+writeFileSync(outPath, html);
+console.log(`Branded HTML written to ${outPath}${editor ? '' : ' (placeholders - editor copy not yet supplied)'}`);
