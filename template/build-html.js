@@ -326,11 +326,15 @@ export function buildBrandedHtml(data) {
     </table>
   </td></tr>
 
+  <!-- Footer merge tags are Pardot CLASSIC editor syntax (%%unsubscribe%%,
+       %%view_online%%) - John confirmed 2026-09-08 that the team uses the
+       classic builder. The Lightning builder would need {{Unsubscribe}}. -->
   <tr>
     <td style="background:#414042; padding:24px 32px; text-align:center;">
       <div style="font-family:Arial, sans-serif; font-size:12px; color:${COLORS.pageBg}; line-height:1.6;">
         <p style="margin:0 0 8px 0;">You are receiving this email because you have a connection with Word of Life Fellowship.</p>
-        <p style="margin:0 0 8px 0;"><a href="{{Unsubscribe}}" rel="nofollow" style="color:${COLORS.pageBg}; text-decoration:underline;">Unsubscribe</a> from email communications</p>
+        <p style="margin:0 0 8px 0;"><a href="%%view_online%%" rel="nofollow" style="color:${COLORS.pageBg}; text-decoration:underline;">View this email online</a></p>
+        <p style="margin:0 0 8px 0;"><a href="%%unsubscribe%%" rel="nofollow" style="color:${COLORS.pageBg}; text-decoration:underline;">Unsubscribe</a> from email communications</p>
         <p style="margin:0;">Word of Life Fellowship<br>4200 Route 9, PO Box 600, Schroon Lake, NY 12870</p>
       </div>
     </td>
