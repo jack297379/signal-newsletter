@@ -7,6 +7,7 @@
 // Usage:
 //   node build-branded.js              -> latest output/*.json
 //   node build-branded.js 2026-09-03   -> that week
+//   node build-branded.js --embed-logo  -> base64 logo for offline preview only
 //
 // If the editor file is missing, the three human sections are rendered with
 // unmistakable [EDITOR: ...] placeholders and the podcast picks default to
@@ -21,7 +22,17 @@
 import { readFileSync, writeFileSync, readdirSync, existsSync } from 'fs';
 import { buildBrandedHtml } from './template/build-html.js';
 
-const arg = process.argv[2];
+// Hosted copy of the masthead logo in Pardot's Files library ("WOL Logo_White",
+// file id 261357, same asset as the local WOL logo_horizontal_white_(R).png).
+// Found 2026-09-08. Passing it means the generated HTML references a real
+// image URL that email clients will load, instead of a base64 data URI that
+// Outlook and Gmail block. Pass --embed-logo to force the base64 preview mode.
+const PARDOT_LOGO_URL =
+  'https://hi.wol.org/l/343241/2023-08-21/29vq4n7/343241/16926289847HlVAsGQ/WOL_logo_horizontal_white__R_.png';
+
+const flags = process.argv.slice(2).filter((a) => a.startsWith('--'));
+const arg = process.argv.slice(2).find((a) => !a.startsWith('--'));
+const logoUrl = flags.includes('--embed-logo') ? null : PARDOT_LOGO_URL;
 const week = arg || readdirSync('./output')
   .filter((f) => /^\d{4}-\d{2}-\d{2}\.json$/.test(f))
   .sort()
@@ -49,6 +60,7 @@ const defaultPicks = (flagged.length >= 5 ? flagged : data.podcasts).slice(0, 5)
 
 const html = buildBrandedHtml({
   ...data,
+  logoUrl,
   podcastPicks: editor?.podcastPicks || defaultPicks,
   ministryAngle: editor?.ministryAngle || '[EDITOR: one sentence connecting a cultural moment above to a youth ministry application]',
   socialPick: editor?.socialPick || {
