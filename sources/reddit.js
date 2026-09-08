@@ -53,6 +53,10 @@ const MOD_POST_PATTERNS = [
   /^\s*\[(mod|mods|meta|announcement|megathread|pinned)\]/i,
   /^\s*(mod|moderator|meta) (post|announcement|update)\b/i,
   /\bmegathread\b/i,
+  // Recurring subreddit housekeeping threads, e.g. "Flair Request Thread [#4]"
+  // (r/GenZ, 2026-09-08) - tag at the end, not the start.
+  /\b(flair|request|discussion|feedback|suggestion) thread\b/i,
+  /\[#\d+\]\s*$/,
 ];
 
 // Emoji-only or two-word titles ("🙄", "DAWG WHAT 😭") carry no trend

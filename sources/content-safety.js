@@ -66,6 +66,11 @@ const POLITICS_PATTERNS = [
   // the lists above; John's rule is absolute, so government and policy
   // machinery words are blocked too, accepting some benign losses.
   /\b(government|govt|federal|administration|executive order|legislation|lawmakers?|policy|policies|military|pentagon|renamings?|renamed|lake america|denali|gulf of america)\b/i,
+  // Protest, policing, and civil-rights flashpoints. Added 2026-09-08 after
+  // three r/GenZ and r/TikTokCringe titles (a protester assaulted at a party
+  // conference, a teen detained by police, police-abuse investigations)
+  // passed the lists above.
+  /\b(protest|protests|protester|protesters|protesting|riot|riots|rioters?|reform uk|party conference|police|policing|cops?|officers?|detained|arrests?|arrested|brutality|civil rights|activists?|activism)\b/i,
 ];
 
 export function isPolitical(text) {
