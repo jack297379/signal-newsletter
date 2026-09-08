@@ -149,6 +149,10 @@ function podcastPickCard(name, blurb, isLast) {
  *   base64 copy for quick previews/screenshots only; that fallback will
  *   render fine in a browser but should never be pasted into Pardot as-is.
  */
+// Footer merge tags are Pardot CLASSIC editor syntax (%%unsubscribe%%,
+// %%view_online%%) - John confirmed 2026-09-08 that the team uses the classic
+// builder. The Lightning builder would need {{Unsubscribe}} instead. Kept as
+// a JS comment so nothing about it leaks into the sent HTML.
 export function buildBrandedHtml(data) {
   const {
     week, movies, tv, youtube, appleMusic, christian,
@@ -326,9 +330,6 @@ export function buildBrandedHtml(data) {
     </table>
   </td></tr>
 
-  <!-- Footer merge tags are Pardot CLASSIC editor syntax (%%unsubscribe%%,
-       %%view_online%%) - John confirmed 2026-09-08 that the team uses the
-       classic builder. The Lightning builder would need {{Unsubscribe}}. -->
   <tr>
     <td style="background:#414042; padding:24px 32px; text-align:center;">
       <div style="font-family:Arial, sans-serif; font-size:12px; color:${COLORS.pageBg}; line-height:1.6;">
