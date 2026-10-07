@@ -18,6 +18,7 @@
 // takes that finished copy as input alongside the raw data.
 
 import { readFileSync } from 'fs';
+import { SHOW_CYA_ATTRIBUTION, CYA_ATTRIBUTION_TEXT } from './attribution.js';
 
 const WOL_LOGO_PATH =
   "/Users/JohnYarosh/Library/CloudStorage/OneDrive-WordofLifeFellowshipInc/WOL NY Marketing Team - WOL_SecondBrain/resources/assets/logos/wol-fellowship/WOL logo_horizontal_white_(R).png";
@@ -229,7 +230,7 @@ export function buildBrandedHtml(data) {
       </table>
       <div style="margin-top:20px; font-family:'Helvetica Neue', Helvetica, Arial, sans-serif; font-weight:700; font-size:34px; letter-spacing:1px; color:#ffffff; text-transform:uppercase;">The Signal</div>
       <div style="margin-top:4px; font-family:Arial, sans-serif; font-size:14px; color:${COLORS.lightBlue};">A weekly culture briefing for youth leaders &mdash; ${formatWeek(week)}</div>
-      <div style="margin-top:8px; font-family:Arial, sans-serif; font-size:11px; font-style:italic; color:rgba(255,255,255,0.65);">Powered by The Center for Youth Apologetics</div>
+      ${SHOW_CYA_ATTRIBUTION ? `<div style="margin-top:8px; font-family:Arial, sans-serif; font-size:11px; font-style:italic; color:rgba(255,255,255,0.65);">${CYA_ATTRIBUTION_TEXT}</div>` : ''}
     </td>
   </tr>
 

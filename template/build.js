@@ -1,4 +1,5 @@
 // template/build.js
+import { SHOW_CYA_ATTRIBUTION, CYA_ATTRIBUTION_TEXT } from './attribution.js';
 // Takes the raw results from every source and formats them into the
 // standard Signal markdown draft, matching the format used in the manual
 // Gemini pilot so the editor workflow doesn't have to change.
@@ -36,8 +37,7 @@ export function buildTemplate({
   return `# The Signal — Week of ${week}
 *What teens are watching, playing, and listening to this week.*
 *Prepared for Word of Life Fellowship Communications*
-*Powered by The Center for Youth Apologetics*
-
+${SHOW_CYA_ATTRIBUTION ? `*${CYA_ATTRIBUTION_TEXT}*\n` : ''}
 ---
 
 ## Data QA
