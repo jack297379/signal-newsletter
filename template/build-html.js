@@ -155,6 +155,9 @@ function podcastPickCard(name, blurb, isLast) {
 // editor's default email body there uses {{Recipient.FirstName}} and
 // {{Unsubscribe}}, i.e. HML is enabled account-wide, so the legacy
 // %%unsubscribe%% syntax is NOT what this account expects.
+// {{EmailPreferenceCenter}} opens the Default Email Preferences Page, where the
+// public "The Signal" list (Pardot list 212761) can be unticked on its own;
+// {{Unsubscribe}} is a global opt-out from all WOL email (2026-10-09, Tim Hunt).
 export function buildBrandedHtml(data) {
   const {
     week, movies, tv, youtube, appleMusic, christian,
@@ -337,8 +340,9 @@ export function buildBrandedHtml(data) {
       <div style="font-family:Arial, sans-serif; font-size:12px; color:${COLORS.pageBg}; line-height:1.6;">
         <p style="margin:0 0 8px 0;">You are receiving this email because you have a connection with Word of Life Fellowship.</p>
         <p style="margin:0 0 8px 0;"><a href="{{View_Online}}" rel="nofollow" style="color:${COLORS.pageBg}; text-decoration:underline;">View this email online</a></p>
-        <p style="margin:0 0 8px 0;"><a href="{{Unsubscribe}}" rel="nofollow" style="color:${COLORS.pageBg}; text-decoration:underline;">Unsubscribe</a> from email communications</p>
-        <p style="margin:0;">Word of Life Fellowship<br>4200 Route 9, PO Box 600, Schroon Lake, NY 12870</p>
+        <p style="margin:0 0 8px 0;"><a href="{{EmailPreferenceCenter}}" rel="nofollow" style="color:${COLORS.pageBg}; text-decoration:underline;">Manage your Signal subscription</a></p>
+        <p style="margin:0 0 8px 0;"><a href="{{Unsubscribe}}" rel="nofollow" style="color:${COLORS.pageBg}; text-decoration:underline;">Unsubscribe from all Word of Life email</a></p>
+        <p style="margin:0;">Word of Life Fellowship<br>4230 Route 9, PO Box 600, Schroon Lake, NY 12870</p>
       </div>
     </td>
   </tr>
