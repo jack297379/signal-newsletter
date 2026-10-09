@@ -14,6 +14,7 @@ import { getYouTubeCommentTrends } from './sources/youtube-comments.js';
 import { getPodcastCandidates } from './sources/podcasts.js';
 import { buildTemplate } from './template/build.js';
 import { runDataChecks } from './qa.js';
+import { addContentFlags } from './sources/ratings.js';
 
 // Wraps each source call so one failure doesn't take down the whole run.
 // Failures are collected and surfaced in Agent Notes instead.
@@ -79,6 +80,13 @@ async function run() {
     }
   }
 
+  // Content flags (v2, 2026-10-09): publisher ratings added to chart rows in
+  // place. Best-effort; lookup failures land in Agent Notes, never fail the run.
+  console.log('\nLooking up content ratings...');
+  const ratingNotes = await addContentFlags(byLabel);
+  const sourceErrorCount = errors.length;
+  ratingNotes.forEach((n) => errors.push(n));
+
   // Data QA pass — runs on whatever came back, even sources that reported OK.
   // Catches parsing artifacts and duplicate rows before the editor ever opens
   // the draft, instead of relying on someone spotting them by eye.
@@ -135,8 +143,8 @@ async function run() {
 
   console.log(`\nDraft saved to ${outPath}`);
   console.log(`Structured data saved to ${jsonPath}`);
-  if (errors.length) {
-    console.log(`\n⚠️  ${errors.length} source(s) failed — check Agent Notes in the draft.`);
+  if (sourceErrorCount) {
+    console.log(`\n⚠️  ${sourceErrorCount} source(s) failed — check Agent Notes in the draft.`);
   }
 }
 

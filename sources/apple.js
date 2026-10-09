@@ -12,6 +12,7 @@ export async function getAppleTopFreeGames() {
   const entries = data.feed.entry || [];
   return entries.map((app, i) => ({
     rank: i + 1,
+    id: app.id?.attributes?.['im:id'],
     name: app['im:name']?.label || 'unknown',
     developer: app['im:artist']?.label || 'unknown',
   }));
@@ -23,6 +24,7 @@ export async function getAppleTopSongs() {
   const entries = data.feed.entry || [];
   return entries.map((track, i) => ({
     rank: i + 1,
+    id: track.id?.attributes?.['im:id'],
     title: track['im:name']?.label || 'unknown',
     artist: track['im:artist']?.label || 'unknown',
   }));
@@ -34,6 +36,7 @@ export async function getAppleTopFreeApps() {
   const entries = data.feed.entry || [];
   return entries.map((app, i) => ({
     rank: i + 1,
+    id: app.id?.attributes?.['im:id'],
     name: app['im:name']?.label || 'unknown',
     category: app.category?.attributes?.label || 'unknown',
     developer: app['im:artist']?.label || 'unknown',

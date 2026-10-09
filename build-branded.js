@@ -9,14 +9,19 @@
 //   node build-branded.js 2026-09-03   -> that week
 //   node build-branded.js --embed-logo  -> base64 logo for offline preview only
 //
-// If the editor file is missing, the three human sections are rendered with
-// unmistakable [EDITOR: ...] placeholders and the podcast picks default to
-// the first five chart entries flagged youth-relevant (real names from the
-// chart, placeholder blurbs). Nothing is ever invented. Editor file shape:
+// If the editor file is missing, the editor sections are rendered with
+// unmistakable [EDITOR: ...] placeholders. Nothing is ever invented. Editor
+// file shape (v2 format, 2026-10-09):
 // {
-//   "socialPick":   { "title": "...", "blurb": "..." },
-//   "podcastPicks": [ { "name": "<exact chart name>", "blurb": "..." }, ... x5 ],
-//   "ministryAngle": "..."
+//   "talkAboutIt": { "basedOn": "<exact chart title or Social Pulse text>",
+//                    "headline": "...", "whatItIs": "...", "whyItMatters": "...",
+//                    "atHome": ["...", "..."], "inYouthGroup": ["...", "..."],
+//                    "scripture": { "reference": "...", "text": "..." } },
+//   "podcastPicks": [ "<exact chart name>", ... up to 5 ],
+//   "headsUp":      [ { "basedOn": "<exact chart title>", "note": "..." } ],  // 0 to 2
+//   "socialPick":   { "source": "...", "title": "...", "blurb": "..." } | null,
+//   "ministryAngle": "...",
+//   "surveyUrl":    "https://..." | null
 // }
 
 import { readFileSync, writeFileSync, readdirSync, existsSync } from 'fs';
@@ -54,19 +59,15 @@ if (existsSync(editorPath)) {
   console.warn(`No ${editorPath} - rendering with [EDITOR: ...] placeholders. This is a layout proof, not a sendable issue.`);
 }
 
-const flagged = data.podcasts.filter((p) => p.flagged);
-const defaultPicks = (flagged.length >= 5 ? flagged : data.podcasts).slice(0, 5)
-  .map((p) => ({ name: p.name, blurb: '[EDITOR: one-line blurb - why this show matters for teens]' }));
-
 const html = buildBrandedHtml({
   ...data,
   logoUrl,
-  podcastPicks: editor?.podcastPicks || defaultPicks,
-  ministryAngle: editor?.ministryAngle || '[EDITOR: one sentence connecting a cultural moment above to a youth ministry application]',
-  socialPick: editor?.socialPick || {
-    title: '[EDITOR: trend name]',
-    blurb: '[EDITOR: 2-3 sentences - what the trend is, why teens care, and one question a youth worker could ask about it]',
-  },
+  talkAboutIt: editor?.talkAboutIt || { placeholder: true },
+  headsUp: editor?.headsUp || [{ placeholder: true, basedOn: '[EDITOR: exact chart title]', note: '[EDITOR: one plain sentence on why parents may want a closer look; only what the rating or data shows]' }],
+  socialPick: editor ? editor.socialPick || null : null,
+  ministryAngle: editor?.ministryAngle || '[EDITOR: one sentence connecting a cultural moment above to youth ministry]',
+  podcastPicks: editor?.podcastPicks || [],
+  surveyUrl: editor?.surveyUrl || null,
 });
 
 const outPath = `./output/${week}-design.html`;

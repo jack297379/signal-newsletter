@@ -183,3 +183,15 @@ section so the editor knows to check that section manually.
   figures, parties, elections, government bodies, or hot-button policy
   topics are dropped before the editor sees them. Deliberately broad.
 
+
+## Changes 2026-10-09 (v2 format: youth leaders and parents)
+
+Decided by John Yarosh 2026-10-09, starting with the first Pardot pilot issue (2026-10-13).
+
+- **One email for youth leaders and parents.** Masthead subtitle is now "A weekly culture briefing for youth leaders and parents"; intro line speaks to home and youth group. Word of Life voice, no byline.
+- **New lead sections.** 01 Talk About It (one real chart or Social Pulse item: what it is, why it matters, two questions for home, two for youth group, a Scripture reference) and 02 Heads Up (0 to 2 chart items for parents). Both are guardrailed: `buildBrandedHtml` throws if `basedOn` is not in the week's pull.
+- **Content flags (`sources/ratings.js`, new).** Publisher ratings only, never inferred: TMDB US movie certification and TV rating, iTunes lookup age rating and advisories for apps and games, Steam ESRB rating and descriptors. Titles with crude language get a "Crude title" flag; charts are shown as is. Ids are now kept on TMDB, Apple and Steam rows for the lookups. Failures go to Agent Notes and never fail the run.
+- **No politics in charts.** Rows matching the politics filter are hidden in the email (published rank numbers kept) and listed in Agent Notes for the editor.
+- **Charts trimmed to top 5 in the email** (`CHART_DEPTH`); the markdown draft keeps the full lists. Podcasts stay editor-picked from the Top 20, names only (a raw top 5 is mostly news and political talk).
+- **Optional sections.** Trend Watch (Social Pulse pick) renders only when set; a feedback-survey box renders when `surveyUrl` is set.
+- Known gap: the iTunes Top Songs feed returned every song as `notExplicit` on 2026-10-09, so songs get no Explicit tag. Apple's newer Apple Music feed carries the flag but is a different chart; switching is an open editorial decision.

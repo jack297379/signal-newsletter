@@ -62,7 +62,7 @@ export function filterSteamItems(items) {
 function toRanked(items, source) {
   return filterSteamItems(items)
     .slice(0, 10)
-    .map((item, i) => ({ rank: i + 1, title: item.name, source }));
+    .map((item, i) => ({ rank: i + 1, id: item.id, title: item.name, source }));
 }
 
 async function tryWeeklyChart() {
