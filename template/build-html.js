@@ -91,7 +91,7 @@ function scoredList(items, { showYear = false } = {}) {
     .map((item) => {
       const year = showYear && item.releaseYear ? ` <span style="color:${COLORS.inkSecondary};">(${escapeHtml(item.releaseYear)})</span>` : '';
       const score = item.score === 'n/a'
-        ? `<span style="color:${COLORS.inkSecondary};">&mdash;</span>`
+        ? `<span style="color:${COLORS.inkSecondary};">n/a</span>`
         : `<span style="color:${COLORS.darkBlue};">${escapeHtml(item.score)}</span>`;
       return `<tr><td style="padding:8px 0; border-top:1px solid ${COLORS.hairline};"><strong>${item.rank}.</strong> ${escapeHtml(item.title)}${year}${ratingChip(item)}</td><td style="padding:8px 0; border-top:1px solid ${COLORS.hairline}; text-align:right; font-weight:bold;">${score}</td></tr>`;
     })
@@ -314,7 +314,7 @@ export function buildBrandedHtml(data) {
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="color-scheme" content="light dark">
-<title>The Signal &mdash; Week of ${formatWeek(week)}</title>
+<title>The Signal: Week of ${formatWeek(week)}</title>
 </head>
 <body style="margin:0; padding:0; background:${COLORS.pageBg};">
 <div style="background:${COLORS.pageBg}; padding:32px 0; font-family:Arial, Helvetica, sans-serif;">
@@ -333,14 +333,14 @@ export function buildBrandedHtml(data) {
         </tr>
       </table>
       <div style="margin-top:20px; font-family:'Helvetica Neue', Helvetica, Arial, sans-serif; font-weight:700; font-size:34px; letter-spacing:1px; color:#ffffff; text-transform:uppercase;">The Signal</div>
-      <div style="margin-top:4px; font-family:Arial, sans-serif; font-size:14px; color:${COLORS.lightBlue};">A weekly culture briefing for youth leaders and parents &mdash; ${formatWeek(week)}</div>
+      <div style="margin-top:4px; font-family:Arial, sans-serif; font-size:14px; color:${COLORS.lightBlue};">A weekly culture briefing for youth leaders and parents &middot; ${formatWeek(week)}</div>
       ${SHOW_CYA_ATTRIBUTION ? `<div style="margin-top:8px; font-family:Arial, sans-serif; font-size:11px; font-style:italic; color:rgba(255,255,255,0.65);">${CYA_ATTRIBUTION_TEXT}</div>` : ''}
     </td>
   </tr>
 
   <tr>
     <td style="padding:24px 32px 8px 32px;">
-      <p style="margin:0; font-family:Arial, sans-serif; font-size:15px; line-height:1.6; color:${COLORS.ink};">Five minutes on what teens are watching, hearing, and playing this week &ndash; plus one thing worth talking about at home or in youth group.</p>
+      <p style="margin:0; font-family:Arial, sans-serif; font-size:15px; line-height:1.6; color:${COLORS.ink};">Five minutes on what teens are watching, hearing, and playing this week, plus one thing worth talking about at home or in youth group.</p>
     </td>
   </tr>
 

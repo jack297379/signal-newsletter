@@ -195,3 +195,8 @@ Decided by John Yarosh 2026-10-09, starting with the first Pardot pilot issue (2
 - **Charts trimmed to top 5 in the email** (`CHART_DEPTH`); the markdown draft keeps the full lists. Podcasts stay editor-picked from the Top 20, names only (a raw top 5 is mostly news and political talk).
 - **Optional sections.** Trend Watch (Social Pulse pick) renders only when set; a feedback-survey box renders when `surveyUrl` is set.
 - Known gap: the iTunes Top Songs feed returned every song as `notExplicit` on 2026-10-09, so songs get no Explicit tag. Apple's newer Apple Music feed carries the flag but is a different chart; switching is an open editorial decision.
+
+## Changes 2026-10-12 (issue 1)
+
+- **No em dashes in the email.** The masthead subtitle now separates the date with a middle dot ("youth leaders and parents · October 12, 2026"), the `<title>` uses a colon, the intro line uses a comma, and a missing chart score shows "n/a". Word of Life copy rules ban em dashes in deliverables; the earlier check missed them because they were HTML entities (`&mdash;`). En dashes in chart labels are unchanged.
+- **Footer address** is 4230 Glendale Road, Pottersville, NY 12860 (USPS retired 4200).
