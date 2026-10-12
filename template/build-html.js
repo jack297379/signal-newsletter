@@ -398,7 +398,7 @@ ${surveyHtml}
         <p style="margin:0 0 8px 0;"><a href="{{View_Online}}" rel="nofollow" style="color:${COLORS.pageBg}; text-decoration:underline;">View this email online</a></p>
         <p style="margin:0 0 8px 0;"><a href="{{EmailPreferenceCenter}}" rel="nofollow" style="color:${COLORS.pageBg}; text-decoration:underline;">Manage your Signal subscription</a></p>
         <p style="margin:0 0 8px 0;"><a href="{{Unsubscribe}}" rel="nofollow" style="color:${COLORS.pageBg}; text-decoration:underline;">Unsubscribe from all Word of Life email</a></p>
-        <p style="margin:0;">Word of Life Fellowship<br>4230 Route 9, PO Box 600, Schroon Lake, NY 12870</p>
+        <p style="margin:0;">Word of Life Fellowship<br>4230 Glendale Road, Pottersville, NY 12860</p>
       </div>
     </td>
   </tr>
