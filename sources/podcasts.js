@@ -23,6 +23,6 @@ export async function getPodcastCandidates() {
     const genreNames = (show.genres || []).map((g) => g.name).join(' ');
     const description = `${show.name} ${show.artistName} ${genreNames}`.toLowerCase();
     const flagged = YOUTH_KEYWORDS.some((kw) => description.includes(kw));
-    return { rank: i + 1, name: show.name, flagged };
+    return { rank: i + 1, id: show.id, name: show.name, url: show.url, flagged };
   });
 }

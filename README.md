@@ -200,3 +200,8 @@ Decided by John Yarosh 2026-10-09, starting with the first Pardot pilot issue (2
 
 - **No em dashes in the email.** The masthead subtitle now separates the date with a middle dot ("youth leaders and parents · October 12, 2026"), the `<title>` uses a colon, the intro line uses a comma, and a missing chart score shows "n/a". Word of Life copy rules ban em dashes in deliverables; the earlier check missed them because they were HTML entities (`&mdash;`). En dashes in chart labels are unchanged.
 - **Footer address** is 4230 Glendale Road, Pottersville, NY 12860 (USPS retired 4200).
+
+## Changes 2026-10-14 (pilot feedback from issue 1)
+
+- **Listen links.** Song titles (Apple Music and Christian Songs) and podcast picks are now links, so readers can quickly check a track or show for explicit content. Apple Music rows link to the song by id; Billboard rows link to an Apple Music search for title and artist; podcasts link to the show page (the source now keeps the Apple id and url) or fall back to an Apple Podcasts search.
+- **Title tidy.** All-caps multi-word movie and TV titles whose words are all 4+ letters display in title case ("LINK CLICK" becomes "Link Click"), after a reader took it for a broken link. Display only; editor picks still match the raw chart title. Short words and acronyms (FBI, WWE RAW) are left alone.

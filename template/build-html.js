@@ -82,6 +82,36 @@ function subhead(text) {
     </tr>`;
 }
 
+// Listen links (added 2026-10-14 from pilot feedback): readers wanted a quick
+// way to check a song or podcast for explicit content. Apple Music tracks have
+// an id, so they link straight to the song; Billboard rows and older podcast
+// rows have none, so they fall back to an Apple search for title + artist.
+function appleMusicUrl(song) {
+  if (song.id) return `https://music.apple.com/us/song/${encodeURIComponent(song.id)}`;
+  return `https://music.apple.com/us/search?term=${encodeURIComponent(`${song.title} ${song.artist || ''}`.trim())}`;
+}
+function applePodcastUrl(show) {
+  if (show.url) return show.url;
+  if (show.id) return `https://podcasts.apple.com/us/podcast/id${encodeURIComponent(show.id)}`;
+  return `https://podcasts.apple.com/us/search?term=${encodeURIComponent(show.name)}`;
+}
+function listenLink(href, text) {
+  return `<a href="${escapeHtml(href)}" style="color:${COLORS.darkBlue}; text-decoration:underline;">${text}</a>`;
+}
+
+// Display-only title tidy (added 2026-10-14): TMDB lists some shows in all
+// caps (e.g. "LINK CLICK"), which a pilot reader took for a broken link.
+// Multi-word all-caps titles whose words are all 4+ letters become title case;
+// single words and anything with a short word or acronym (FBI, WWE RAW) stay. Matching
+// for editor picks still uses the raw chart title.
+function tidyTitle(title) {
+  const t = String(title || '');
+  const words = t.split(/\s+/).filter(Boolean);
+  if (words.length < 2 || t !== t.toUpperCase() || !/[A-Z]/.test(t)) return t;
+  if (!words.every((w) => w.replace(/[^A-Z]/g, '').length >= 4)) return t;
+  return words.map((w) => w.charAt(0) + w.slice(1).toLowerCase()).join(' ');
+}
+
 // Renders a scored list (movies/TV): rank + title (+ optional year), score right-aligned.
 function scoredList(items, { showYear = false } = {}) {
   if (!items || items.length === 0) {
@@ -93,7 +123,7 @@ function scoredList(items, { showYear = false } = {}) {
       const score = item.score === 'n/a'
         ? `<span style="color:${COLORS.inkSecondary};">n/a</span>`
         : `<span style="color:${COLORS.darkBlue};">${escapeHtml(item.score)}</span>`;
-      return `<tr><td style="padding:8px 0; border-top:1px solid ${COLORS.hairline};"><strong>${item.rank}.</strong> ${escapeHtml(item.title)}${year}${ratingChip(item)}</td><td style="padding:8px 0; border-top:1px solid ${COLORS.hairline}; text-align:right; font-weight:bold;">${score}</td></tr>`;
+      return `<tr><td style="padding:8px 0; border-top:1px solid ${COLORS.hairline};"><strong>${item.rank}.</strong> ${escapeHtml(tidyTitle(item.title))}${year}${ratingChip(item)}</td><td style="padding:8px 0; border-top:1px solid ${COLORS.hairline}; text-align:right; font-weight:bold;">${score}</td></tr>`;
     })
     .join('\n');
 }
@@ -366,9 +396,9 @@ export function buildBrandedHtml(data) {
   ${chartBlock('YouTube – Trending (US)', twoLineList(top(youtube), (v) => ({ title: v.title, meta: `${v.channel} – ${v.views} views` })), { last: true })}
 
   ${sectionBadge('04', 'What Teens Are Hearing')}
-  ${chartBlock('Apple Music – Top Songs', plainList(top(appleMusic), (s) => `${escapeHtml(s.title)} – ${escapeHtml(s.artist)}`))}
-  ${chartBlock('Christian Songs', plainList(top(christian), (s) => `${escapeHtml(s.title)} – ${escapeHtml(s.artist)}`))}
-  ${chartBlock(`Apple Podcasts – Picks From This Week's Top ${podcasts?.length || 20}`, podcastRows.length ? plainList(podcastRows, (p) => escapeHtml(p.name)) : `<tr><td style="padding:8px 0; color:${COLORS.inkSecondary}; font-style:italic;">[EDITOR: pick up to 5 shows from the Top 20 (names only), skipping news and political talk]</td></tr>`, { last: true })}
+  ${chartBlock('Apple Music – Top Songs', plainList(top(appleMusic), (s) => `${listenLink(appleMusicUrl(s), escapeHtml(s.title))} – ${escapeHtml(s.artist)}`))}
+  ${chartBlock('Christian Songs', plainList(top(christian), (s) => `${listenLink(appleMusicUrl(s), escapeHtml(s.title))} – ${escapeHtml(s.artist)}`))}
+  ${chartBlock(`Apple Podcasts – Picks From This Week's Top ${podcasts?.length || 20}`, podcastRows.length ? plainList(podcastRows, (p) => listenLink(applePodcastUrl(p), escapeHtml(p.name))) : `<tr><td style="padding:8px 0; color:${COLORS.inkSecondary}; font-style:italic;">[EDITOR: pick up to 5 shows from the Top 20 (names only), skipping news and political talk]</td></tr>`, { last: true })}
 
   ${sectionBadge('05', 'What Teens Are Playing')}
   ${chartBlock('Steam – Top Sellers', plainList(top(steam), (g) => escapeHtml(g.title)))}
