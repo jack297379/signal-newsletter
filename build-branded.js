@@ -21,8 +21,12 @@
 //   "headsUp":      [ { "basedOn": "<exact chart title>", "note": "..." } ],  // 0 to 2
 //   "socialPick":   { "source": "...", "title": "...", "blurb": "..." } | null,
 //   "ministryAngle": "...",
-//   "surveyUrl":    "https://..." | null
+//   "surveyUrl":    "https://..." | null,
+//   "preheader":    "..." | null,      // hidden inbox preview line (2026-10-19)
+//   "headsUpIntro": "..." | null,      // one line above the Heads Up list (2026-10-19)
+//   "pilotNote":    { "heading": "...", "items": ["..."] } | null  // pilot only, above the survey box
 // }
+// Headlines must not assert counts the charts contradict; avoid exact counts.
 
 import { readFileSync, writeFileSync, readdirSync, existsSync } from 'fs';
 import { buildBrandedHtml } from './template/build-html.js';
@@ -68,6 +72,9 @@ const html = buildBrandedHtml({
   ministryAngle: editor?.ministryAngle || '[EDITOR: one sentence connecting a cultural moment above to youth ministry]',
   podcastPicks: editor?.podcastPicks || [],
   surveyUrl: editor?.surveyUrl || null,
+  preheader: editor?.preheader || null,
+  headsUpIntro: editor?.headsUpIntro || null,
+  pilotNote: editor?.pilotNote || null,
 });
 
 const outPath = `./output/${week}-design.html`;

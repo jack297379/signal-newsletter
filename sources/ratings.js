@@ -18,6 +18,13 @@
 //   TMDB  /tv/{id}/content_ratings   -> US TV rating
 //   iTunes lookup?id=a,b,c           -> songs: trackExplicitness;
 //                                       apps: trackContentRating + advisories
+//   apps.apple.com/us/app/id{N}      -> apps: the age rating the storefront
+//                                       shows. Apple moved to 4+/9+/13+/16+/18+
+//                                       tiers, but the lookup API still returns
+//                                       the old 4+/9+/12+/17+ (found 2026-10-19:
+//                                       Claude and Muse show 18+, KICK 16+,
+//                                       ChatGPT 13+). The storefront wins; the
+//                                       lookup value is the fallback.
 //   Steam appdetails?appids=N        -> ratings.esrb {rating, descriptors}
 //   YouTube trending has no usable rating (contentRating comes back empty).
 
@@ -67,6 +74,54 @@ async function itunesLookup(ids) {
   if (!clean.length) return new Map();
   const data = await fetchJsonWithRetry(`https://itunes.apple.com/lookup?id=${clean.join(',')}&country=us`, { label: 'iTunes lookup' });
   return new Map((data.results || []).map((r) => [String(r.trackId), r]));
+}
+
+// Reads the "Age Rating" figure from the public App Store page.
+export async function storefrontAgeRating(id) {
+  const res = await fetch(`https://apps.apple.com/us/app/id${encodeURIComponent(id)}`, { redirect: 'follow' });
+  if (!res.ok) throw new Error(`App Store page ${id}: HTTP ${res.status}`);
+  const html = await res.text();
+  const at = html.search(/Age Rating/i);
+  if (at < 0) return null;
+  const m = html.slice(at, at + 400).replace(/<[^>]*>/g, ' ').match(/(\d{1,2}\+)/);
+  return m ? m[1] : null;
+}
+
+export async function refreshAppRatings(rows, notes) {
+  for (const row of rows || []) {
+    if (!row.id) continue;
+    try {
+      const r = await storefrontAgeRating(row.id);
+      if (r) row.rating = r;
+    } catch (err) {
+      notes.push(`Ratings (App Store page): ${row.name}: ${err.message}`);
+    }
+    await new Promise((ok) => setTimeout(ok, 500));
+  }
+}
+
+// Billboard rows (Christian Songs) carry no Apple id, so the email had to
+// link to an Apple Music search. This finds the song with the free iTunes
+// Search API and keeps it only on an exact (case-insensitive) title AND
+// artist match, so a link never points at the wrong song (2026-10-19).
+const norm = (t) => String(t || '').toLowerCase().replace(/\s+/g, ' ').trim();
+export async function resolveAppleSongIds(rows, notes) {
+  for (const row of rows || []) {
+    if (row.id) continue;
+    try {
+      const term = encodeURIComponent(`${row.title} ${row.artist || ''}`.trim());
+      const data = await fetchJsonWithRetry(`https://itunes.apple.com/search?term=${term}&entity=song&country=us&limit=10`, { label: `iTunes search ${row.title}` });
+      const hit = (data.results || []).find((r) => norm(r.trackName) === norm(row.title) && norm(r.artistName) === norm(row.artist));
+      if (hit) {
+        row.id = String(hit.trackId);
+        if (hit.trackExplicitness === 'explicit') row.rating = 'Explicit';
+      } else {
+        notes.push(`Apple Music link: no exact match for "${row.title}" by ${row.artist}; email falls back to a search link.`);
+      }
+    } catch (err) {
+      notes.push(`Apple Music link (${row.title}): ${err.message}`);
+    }
+  }
 }
 
 async function steamRating(id) {
@@ -120,17 +175,22 @@ export async function addContentFlags(byLabel) {
     }
   }
 
+  for (const label of ['Apple Games', 'Apple All Apps']) {
+    await refreshAppRatings(byLabel[label], notes);
+  }
+  await resolveAppleSongIds(byLabel['Christian Songs'], notes);
+
   await eachRow(byLabel['Steam'], 'Steam', notes, (g) => (g.id ? steamRating(g.id) : null));
 
   for (const label of ['TMDB Movies', 'TMDB TV', 'YouTube', 'Apple Music', 'Christian Songs', 'Steam', 'Apple Games', 'Apple All Apps']) {
     for (const row of byLabel[label] || []) {
       const name = row.title || row.name;
       if (hasCrudeTitle(name)) row.crudeTitle = true;
-      // Hard rule: absolutely no politics. Political chart rows are hidden in
-      // the email (rank numbers stay as published) and listed for the editor.
+      // Charts show as published (2026-10-19). Political rows are only flagged
+      // so the editor does not pick them for the lead or Heads Up.
       if (isPolitical(`${name} ${row.developer || ''} ${row.channel || ''}`)) {
         row.political = true;
-        notes.push(`Politics rule: "${name}" (${label} #${row.rank}) is hidden in the email. Editor: confirm.`);
+        notes.push(`Politics rule: "${name}" (${label} #${row.rank}) is political. Shown as published; do not pick it for editorial copy.`);
       }
     }
   }

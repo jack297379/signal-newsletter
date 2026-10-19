@@ -1,6 +1,7 @@
 // template/build-html.js
-// Renders the branded, distribution-ready Signal HTML — same visual system
-// Claude Design produced (numbered section badges, italic Georgia subheads,
+// Renders the branded, distribution-ready Signal HTML. Visual system revised
+// 2026-10-19 against the WOL Design System (design_handoff_the_signal_email/):
+// numbered section badges, sans subheads, a "The Charts" group legend,
 // light-blue cards, dark-blue "Worth Naming Out Loud" callout),
 // rebuilt as a real template instead of a one-off generation.
 //
@@ -27,7 +28,7 @@ const COLORS = {
   darkBlue: '#004f68',
   lightBlue: '#73d1f5',
   ink: '#414042',
-  inkSecondary: '#939598',
+  inkSecondary: '#6d6e71', // was #939598 (2.9:1 on white, fails AA); design review 2026-10-19
   hairline: '#e6e7e8',
   pageBg: '#e6e7e8',
   pickCardBg: '#eaf7fc',
@@ -57,6 +58,28 @@ function escapeHtml(str) {
     .replace(/>/g, '&gt;');
 }
 
+// Brand condensed display cut (masthead, CTA); falls back to Helvetica Neue.
+const CONDENSED = `font-family:'Helvetica Neue LT Std Cn', 'Helvetica Neue', Helvetica, Arial, sans-serif; font-stretch:condensed;`;
+
+// Data normalization for display (design review 2026-10-19): add a missing
+// space before "(" ("Tarugana(ft." -> "Tarugana (ft.") and collapse repeated
+// whitespace ("Johnny slime  "). Matching for editor picks still uses raw text.
+function cleanText(str) {
+  return String(str ?? '').replace(/(\S)\(/g, '$1 (').replace(/\s+/g, ' ').trim();
+}
+
+// Smart-quote pass for editor copy: the brand never uses straight quotes.
+function smartQuotes(str) {
+  return String(str ?? '')
+    .replace(/(^|[\s(\[{])"/g, '$1\u201C')
+    .replace(/"/g, '\u201D')
+    .replace(/(^|[\s(\[{])'/g, '$1\u2018')
+    .replace(/'/g, '\u2019');
+}
+function copy(str) {
+  return escapeHtml(smartQuotes(str));
+}
+
 function sectionBadge(number, label) {
   return `
     <tr>
@@ -77,7 +100,7 @@ function subhead(text) {
   return `
     <tr>
       <td style="padding:16px 32px 4px 32px;">
-        <div style="font-family:Georgia, 'Noto Serif', serif; font-style:italic; font-size:20px; color:#0a7ea4;">${escapeHtml(text)}</div>
+        <div style="font-family:'Helvetica Neue', Helvetica, Arial, sans-serif; font-weight:700; font-size:18px; color:${COLORS.darkBlue};">${escapeHtml(text)}</div>
       </td>
     </tr>`;
 }
@@ -94,6 +117,33 @@ function applePodcastUrl(show) {
   if (show.url) return show.url;
   if (show.id) return `https://podcasts.apple.com/us/podcast/id${encodeURIComponent(show.id)}`;
   return `https://podcasts.apple.com/us/search?term=${encodeURIComponent(show.name)}`;
+}
+// Store links for games and apps (added 2026-10-19 so every chart section links).
+function appStoreUrl(app) {
+  return app.id ? `https://apps.apple.com/us/app/id${encodeURIComponent(app.id)}` : null;
+}
+function steamUrl(game) {
+  return game.id ? `https://store.steampowered.com/app/${encodeURIComponent(game.id)}/` : null;
+}
+// TMDB title pages for movie and TV rows (added 2026-10-19 for issue 3): a
+// linked title reads as a show, not a button ("Link Click" feedback).
+function tmdbUrl(item, kind) {
+  return item.id ? `https://www.themoviedb.org/${kind}/${encodeURIComponent(item.id)}` : null;
+}
+function maybeLink(href, text) {
+  return href ? listenLink(href, text) : text;
+}
+// Spotify (added 2026-10-19, John Yarosh: most of the office uses Spotify).
+// No Spotify API key yet, so this opens a Spotify search for title + artist,
+// which lands in the Spotify app on a phone. Swap for direct track/show
+// links once a Spotify developer app exists.
+function spotifySearchUrl(query) {
+  return `https://open.spotify.com/search/${encodeURIComponent(String(query).trim())}`;
+}
+// Second line under a song or podcast: "Apple Music · Spotify".
+function listenLine(appleHref, appleLabel, spotifyQuery) {
+  const small = (href, text) => `<a href="${escapeHtml(href)}" style="color:${COLORS.darkBlue}; text-decoration:underline;">${text}</a>`;
+  return `<span style="font-size:12px; color:${COLORS.inkSecondary};">${small(appleHref, appleLabel)} &middot; ${small(spotifySearchUrl(spotifyQuery), 'Spotify')}</span>`;
 }
 function listenLink(href, text) {
   return `<a href="${escapeHtml(href)}" style="color:${COLORS.darkBlue}; text-decoration:underline;">${text}</a>`;
@@ -112,29 +162,31 @@ function tidyTitle(title) {
   return words.map((w) => w.charAt(0) + w.slice(1).toLowerCase()).join(' ');
 }
 
-// Renders a scored list (movies/TV): rank + title (+ optional year), score right-aligned.
-function scoredList(items, { showYear = false } = {}) {
+// Renders a scored list (movies/TV): rank + title, score right-aligned, under
+// a column header. Release year dropped 2026-10-19 (redundant in a "trending
+// this week" list). Score is TMDB's user vote average (sources/tmdb.js).
+const SCORE_HEADER = `<tr><td style="padding:0 0 6px 0; font-size:11px; font-weight:bold; letter-spacing:1px; text-transform:uppercase; color:${COLORS.inkSecondary};">Title</td><td style="padding:0 0 6px 0; font-size:11px; font-weight:bold; letter-spacing:1px; text-transform:uppercase; color:${COLORS.inkSecondary}; text-align:right;">TMDB Score / 10</td></tr>`;
+function scoredList(items, kind) {
   if (!items || items.length === 0) {
     return `<tr><td style="padding:8px 0; color:${COLORS.inkSecondary}; font-style:italic;">Source unavailable this week.</td></tr>`;
   }
-  return items
+  return SCORE_HEADER + '\n' + items
     .map((item) => {
-      const year = showYear && item.releaseYear ? ` <span style="color:${COLORS.inkSecondary};">(${escapeHtml(item.releaseYear)})</span>` : '';
       const score = item.score === 'n/a'
         ? `<span style="color:${COLORS.inkSecondary};">n/a</span>`
         : `<span style="color:${COLORS.darkBlue};">${escapeHtml(item.score)}</span>`;
-      return `<tr><td style="padding:8px 0; border-top:1px solid ${COLORS.hairline};"><strong>${item.rank}.</strong> ${escapeHtml(tidyTitle(item.title))}${year}${ratingChip(item)}</td><td style="padding:8px 0; border-top:1px solid ${COLORS.hairline}; text-align:right; font-weight:bold;">${score}</td></tr>`;
+      return `<tr><td style="padding:8px 0; border-top:1px solid ${COLORS.hairline};"><strong>${item.rank}.</strong> ${maybeLink(tmdbUrl(item, kind), escapeHtml(cleanText(tidyTitle(item.title))))}${ratingChip(item, { rated: true })}</td><td style="padding:8px 0; border-top:1px solid ${COLORS.hairline}; text-align:right; font-weight:bold;">${score}</td></tr>`;
     })
     .join('\n');
 }
 
-// Renders a plain single-line list: "N. Title – meta"
-function plainList(items, formatter) {
+// Renders a plain list: "N. Title – meta", plus an optional second line.
+function plainList(items, formatter, secondLine = null, { rated = false } = {}) {
   if (!items || items.length === 0) {
     return `<tr><td style="padding:8px 0; color:${COLORS.inkSecondary}; font-style:italic;">Source unavailable this week.</td></tr>`;
   }
   return items
-    .map((item) => `<tr><td style="padding:8px 0; border-top:1px solid ${COLORS.hairline};">${item.rank}. ${formatter(item)}${ratingChip(item)}</td></tr>`)
+    .map((item) => `<tr><td style="padding:8px 0; border-top:1px solid ${COLORS.hairline};">${item.rank}. ${formatter(item)}${ratingChip(item, { rated })}${secondLine ? `<br>${secondLine(item)}` : ''}</td></tr>`)
     .join('\n');
 }
 
@@ -147,7 +199,7 @@ function twoLineList(items, formatter) {
     .map((item, i) => {
       const { title, meta } = formatter(item);
       const isLast = i === items.length - 1;
-      return `<tr><td style="padding:5px 0${isLast ? ' 0 0' : ''}; border-top:1px solid ${COLORS.hairline};"><strong>${item.rank}. ${escapeHtml(title)}</strong>${ratingChip(item)}<br><span style="color:${COLORS.inkSecondary};">${escapeHtml(meta)}</span></td></tr>`;
+      return `<tr><td style="padding:5px 0${isLast ? ' 0 0' : ''}; border-top:1px solid ${COLORS.hairline};"><strong>${item.rank}. ${escapeHtml(cleanText(title))}</strong>${ratingChip(item)}<br><span style="color:${COLORS.inkSecondary};">${escapeHtml(meta)}</span></td></tr>`;
     })
     .join('\n');
 }
@@ -161,26 +213,41 @@ function twoLineList(items, formatter) {
 // no individual byline.
 const CHART_DEPTH = 5;
 
-// Ratings that get the amber "heads up" chip instead of the neutral one.
-const MATURE_RATINGS = new Set(['R', 'NC-17', 'TV-MA', 'Explicit', '17+', '18+', 'ESRB M', 'ESRB AO']);
+// Ratings that get the dark-blue mature chip instead of the neutral one
+// (was amber #fde7c8/#8a4b00, off-palette; design review 2026-10-19).
+// 16+ and 18+ are Apple's current top tiers (17+ kept for older pulls).
+const MATURE_RATINGS = new Set(['R', 'NC-17', 'TV-MA', 'Explicit', '16+', '17+', '18+', 'ESRB M', 'ESRB AO']);
 
-function ratingChip(item) {
+// `rated` marks chart types that normally carry a rating (movies, TV, games,
+// apps). A row there with no rating gets an outlined "Not rated" chip so the
+// gap reads as intentional, not a glitch (John Yarosh, 2026-10-19: "Link
+// Click" had no US rating and looked like an error). Songs are only tagged
+// when Apple marks them Explicit, so they never get this chip.
+const NOT_RATED_CHIP = `<span style="display:inline-block; margin-left:6px; padding:0 5px; border-radius:3px; font-family:Arial, sans-serif; font-size:10px; font-weight:bold; letter-spacing:0.5px; vertical-align:1px; background:#ffffff; color:${COLORS.inkSecondary}; border:1px solid ${COLORS.hairline};">Not rated</span>`;
+
+function ratingChip(item, { rated = false } = {}) {
   const chips = [];
+  if (!item.rating && rated) chips.push(NOT_RATED_CHIP);
   if (item.rating) {
     const mature = MATURE_RATINGS.has(item.rating);
-    chips.push(`<span style="display:inline-block; margin-left:6px; padding:1px 6px; border-radius:3px; font-family:Arial, sans-serif; font-size:10px; font-weight:bold; letter-spacing:0.5px; vertical-align:1px; ${mature ? 'background:#fde7c8; color:#8a4b00;' : `background:${COLORS.hairline}; color:${COLORS.ink};`}">${escapeHtml(item.rating)}</span>`);
+    chips.push(`<span style="display:inline-block; margin-left:6px; padding:1px 6px; border-radius:3px; font-family:Arial, sans-serif; font-size:10px; font-weight:bold; letter-spacing:0.5px; vertical-align:1px; ${mature ? `background:${COLORS.darkBlue}; color:#ffffff;` : `background:${COLORS.hairline}; color:${COLORS.ink};`}">${escapeHtml(item.rating)}</span>`);
   }
   if (item.crudeTitle) {
-    chips.push(`<span style="display:inline-block; margin-left:6px; padding:1px 6px; border-radius:3px; font-family:Arial, sans-serif; font-size:10px; font-weight:bold; letter-spacing:0.5px; vertical-align:1px; background:#fde7c8; color:#8a4b00;">Crude title</span>`);
+    chips.push(`<span style="display:inline-block; margin-left:6px; padding:1px 6px; border-radius:3px; font-family:Arial, sans-serif; font-size:10px; font-weight:bold; letter-spacing:0.5px; vertical-align:1px; background:${COLORS.darkBlue}; color:#ffffff;">Crude title</span>`);
   }
   return chips.join('');
 }
 
-// Political rows are hidden (hard rule, no politics); the published rank
-// numbers are kept so the chart is never silently renumbered.
+// Charts show exactly as published, political titles included (John Yarosh,
+// 2026-10-19). The no-politics rule covers editorial picks (lead, Heads Up,
+// podcast picks, Trend Watch/Reddit), not chart data. `political` is still
+// set by sources/ratings.js as a note for the editor.
 function top(items) {
-  return (items || []).filter((r) => !r.political).slice(0, CHART_DEPTH);
+  return (items || []).slice(0, CHART_DEPTH);
 }
+
+const songLine = (s) => `${escapeHtml(cleanText(s.title))} – ${escapeHtml(cleanText(s.artist))}`;
+const songListen = (s) => listenLine(appleMusicUrl(s), 'Apple Music', `${cleanText(s.title)} ${cleanText(s.artist)}`);
 
 function chartBlock(label, rowsHtml, { last = false } = {}) {
   return `
@@ -196,7 +263,43 @@ function questionList(label, questions) {
   if (!questions || !questions.length) return '';
   return `
           <div style="font-family:'Helvetica Neue', Helvetica, Arial, sans-serif; font-weight:700; font-size:11px; letter-spacing:1.5px; color:${COLORS.darkBlue}; text-transform:uppercase; margin:16px 0 6px 0;">${escapeHtml(label)}</div>
-          ${questions.map((q) => `<div style="font-family:Arial, sans-serif; font-size:14px; color:${COLORS.ink}; line-height:1.6; margin:0 0 6px 0; padding-left:14px; text-indent:-14px;">&bull;&nbsp; ${escapeHtml(q)}</div>`).join('\n          ')}`;
+          ${questions.map((q) => `<div style="font-family:Arial, sans-serif; font-size:14px; color:${COLORS.ink}; line-height:1.6; margin:0 0 6px 0; padding-left:14px; text-indent:-14px;">&bull;&nbsp; ${copy(q)}</div>`).join('\n          ')}`;
+}
+
+// The three chart sections share one un-numbered group header and legend
+// (design review 2026-10-19), placed before the first chart section bar.
+const CHART_SECTIONS = ['03', '04', '05'];
+
+function legendChip(label, style) {
+  return `<span style="display:inline-block; padding:1px 6px; border-radius:3px; font-family:Arial, sans-serif; font-size:10px; font-weight:bold; letter-spacing:0.5px; ${style}">${label}</span>`;
+}
+
+function chartsGroupHeader(first, last) {
+  const range = `${first}&ndash;${last}`;
+  return `
+    <tr>
+      <td style="background:${COLORS.lightBlue}; padding:10px 32px;">
+        <span style="font-family:'Helvetica Neue', Helvetica, Arial, sans-serif; font-weight:700; font-size:13px; letter-spacing:2px; color:${COLORS.darkBlue}; text-transform:uppercase;">The Charts</span>
+        <span style="font-family:'Helvetica Neue', Helvetica, Arial, sans-serif; font-weight:700; font-size:13px; letter-spacing:2px; color:${COLORS.darkBlue};">&nbsp;&nbsp;${range}</span>
+      </td>
+    </tr>
+    <tr><td style="padding:0; background:${COLORS.pickCardBg};">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr><td style="padding:16px 32px 18px 32px;">
+          <div style="font-family:'Helvetica Neue', Helvetica, Arial, sans-serif; font-weight:700; font-size:11px; letter-spacing:1.5px; color:${COLORS.darkBlue}; text-transform:uppercase; margin-bottom:6px;">How to Read the Charts</div>
+          <div style="font-family:Arial, sans-serif; font-size:14px; color:${COLORS.ink}; line-height:1.6; margin-bottom:12px;">Sections ${range} show what is actually popular this week, as is. Tags are the publisher's own ratings: movie and TV ratings, Apple's explicit and age ratings, and ESRB.</div>
+          <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+            <tr>
+              <td style="padding:0 6px 6px 0; vertical-align:middle;">${legendChip('PG-13', `background:#ffffff; color:${COLORS.ink}; border:1px solid #c9e9f6;`)}</td>
+              <td style="padding:0 20px 6px 0; vertical-align:middle; font-family:Arial, sans-serif; font-size:13px; color:${COLORS.ink};">General to teen</td>
+              <td style="padding:0 6px 6px 0; vertical-align:middle;">${legendChip('R', `background:${COLORS.darkBlue}; color:#ffffff;`)}</td>
+              <td style="padding:0 0 6px 0; vertical-align:middle; font-family:Arial, sans-serif; font-size:13px; color:${COLORS.ink};">Mature (R, TV-MA, M, 16+)</td>
+            </tr>
+          </table>
+          <div style="font-family:Arial, sans-serif; font-size:13px; color:${COLORS.ink}; line-height:1.5; margin-top:4px;">${NOT_RATED_CHIP.replace('margin-left:6px; ', '')} means no rating was available, not that a title is clean. Songs are tagged only when Apple marks them Explicit.</div>
+        </td></tr>
+      </table>
+    </td></tr>`;
 }
 
 // Every chart row and Social Pulse candidate, for the "based on a real
@@ -252,7 +355,7 @@ export function buildBrandedHtml(data) {
     week, movies, tv, youtube, appleMusic, christian,
     steam, appleGames, appleApps, podcasts,
     talkAboutIt = null, headsUp = [], podcastPicks = [], ministryAngle, socialPick = null,
-    surveyUrl = null, logoUrl = null,
+    surveyUrl = null, logoUrl = null, preheader = null, headsUpIntro = null, pilotNote = null,
   } = data;
 
   // Structural guardrails: the feature and the heads-up items must point at
@@ -281,7 +384,7 @@ export function buildBrandedHtml(data) {
       throw new Error(`buildBrandedHtml: podcast pick "${name}" does not match any entry in this week's real podcast chart. Refusing to render a fabricated pick.`);
     }
     return row;
-  });
+  }).sort((a, b) => a.rank - b.rank); // list in chart order, not pick order
 
   let logoSrc = logoUrl;
   if (!logoSrc) {
@@ -298,20 +401,20 @@ export function buildBrandedHtml(data) {
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${COLORS.pickCardBg}; border-radius:8px;">
         <tr><td style="padding:22px 24px;">
           <div style="font-family:'Helvetica Neue', Helvetica, Arial, sans-serif; font-weight:700; font-size:11px; letter-spacing:1.5px; color:${COLORS.inkSecondary}; text-transform:uppercase; margin-bottom:6px;">From this week's charts</div>
-          <div style="font-family:'Helvetica Neue', Helvetica, Arial, sans-serif; font-weight:700; font-size:19px; color:${COLORS.darkBlue}; line-height:1.3; margin-bottom:12px;">${escapeHtml(t.headline || '[EDITOR: headline]')}</div>
-          <div style="font-family:Arial, sans-serif; font-size:14px; color:${COLORS.ink}; line-height:1.6; margin-bottom:10px;"><strong>What it is.</strong> ${escapeHtml(t.whatItIs || '[EDITOR: two or three sentences, only what the data shows]')}</div>
-          <div style="font-family:Arial, sans-serif; font-size:14px; color:${COLORS.ink}; line-height:1.6;"><strong>Why it matters.</strong> ${escapeHtml(t.whyItMatters || '[EDITOR: why it matters for teens]')}</div>
+          <div style="font-family:'Helvetica Neue', Helvetica, Arial, sans-serif; font-weight:700; font-size:19px; color:${COLORS.darkBlue}; line-height:1.3; margin-bottom:12px;">${copy(t.headline || '[EDITOR: headline]')}</div>
+          <div style="font-family:Arial, sans-serif; font-size:14px; color:${COLORS.ink}; line-height:1.6; margin-bottom:10px;"><strong>What it is.</strong> ${copy(t.whatItIs || '[EDITOR: two or three sentences, only what the data shows]')}</div>
+          <div style="font-family:Arial, sans-serif; font-size:14px; color:${COLORS.ink}; line-height:1.6;"><strong>Why it matters.</strong> ${copy(t.whyItMatters || '[EDITOR: why it matters for teens]')}</div>
           ${questionList('At home', t.atHome || ['[EDITOR: question for parents]', '[EDITOR: question for parents]'])}
           ${questionList('In youth group', t.inYouthGroup || ['[EDITOR: question for leaders]', '[EDITOR: question for leaders]'])}
-          ${t.scripture?.reference ? `<div style="margin-top:16px; padding-top:14px; border-top:1px solid #c9e9f6; font-family:Georgia, 'Noto Serif', serif; font-style:italic; font-size:14px; color:${COLORS.darkBlue}; line-height:1.6;">${t.scripture.text ? `"${escapeHtml(t.scripture.text)}" ` : ''}<span style="font-style:normal; font-weight:bold;">${escapeHtml(t.scripture.reference)}</span></div>` : ''}
+          ${t.scripture?.reference ? `<div style="margin-top:16px; padding-top:14px; border-top:1px solid #c9e9f6; font-family:Georgia, 'Noto Serif', serif; font-style:italic; font-size:14px; color:${COLORS.darkBlue}; line-height:1.6;">${t.scripture.text ? `&ldquo;${copy(t.scripture.text)}&rdquo; ` : ''}<span style="font-style:normal; font-weight:bold;">${escapeHtml(t.scripture.reference)}</span></div>` : ''}
         </td></tr>
       </table>`;
 
   const headsUpHtml = headsUpRows.length
     ? headsUpRows.map((h) => `
         <tr><td style="padding:10px 0; border-top:1px solid ${COLORS.hairline}; font-family:Arial, sans-serif; font-size:14px; color:${COLORS.ink}; line-height:1.6;">
-          <strong>${escapeHtml(h.basedOn)}</strong>${ratingChip(h.row)}${h.where ? ` <span style="color:${COLORS.inkSecondary}; font-size:12px;">(${escapeHtml(h.where)})</span>` : ''}<br>
-          ${escapeHtml(h.note)}${h.row.advisories?.length ? `<br><span style="color:${COLORS.inkSecondary}; font-size:12px;">Publisher's content notes: ${escapeHtml(h.row.advisories.join('; '))}</span>` : ''}
+          <strong>${maybeLink(h.where === 'App Store Apps' || h.where === 'App Store Games' ? appStoreUrl(h.row) : h.where === 'Steam' ? steamUrl(h.row) : null, escapeHtml(h.basedOn))}</strong>${ratingChip(h.row)}${h.where ? ` <span style="color:${COLORS.inkSecondary}; font-size:12px;">(${escapeHtml(h.where)})</span>` : ''}<br>
+          ${copy(h.note)}
         </td></tr>`).join('\n')
     : `<tr><td style="padding:10px 0; font-family:Arial, sans-serif; font-size:14px; color:${COLORS.inkSecondary}; font-style:italic;">Nothing flagged this week.</td></tr>`;
 
@@ -320,10 +423,21 @@ export function buildBrandedHtml(data) {
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${COLORS.pickCardBg}; border-radius:8px;">
         <tr><td style="padding:20px 24px;">
           <div style="font-family:'Helvetica Neue', Helvetica, Arial, sans-serif; font-weight:700; font-size:11px; letter-spacing:1.5px; color:${COLORS.darkBlue}; text-transform:uppercase; margin-bottom:6px;">Trend Watch${socialPick.source ? ` &middot; <span style="font-weight:400; letter-spacing:0; text-transform:none;">Spotted on ${escapeHtml(socialPick.source)}</span>` : ''}</div>
-          <div style="font-family:'Helvetica Neue', Helvetica, Arial, sans-serif; font-weight:700; font-size:15px; color:${COLORS.darkBlue}; margin-bottom:6px;">${escapeHtml(socialPick.title)}</div>
-          <div style="font-family:Arial, sans-serif; font-size:14px; color:${COLORS.ink}; line-height:1.6;">${escapeHtml(socialPick.blurb)}</div>
+          <div style="font-family:'Helvetica Neue', Helvetica, Arial, sans-serif; font-weight:700; font-size:15px; color:${COLORS.darkBlue}; margin-bottom:6px;">${copy(socialPick.title)}</div>
+          <div style="font-family:Arial, sans-serif; font-size:14px; color:${COLORS.ink}; line-height:1.6;">${copy(socialPick.blurb)}</div>
         </td></tr>
       </table>`
+    : '';
+
+  // Pilot-only "what changed" note (John Yarosh, 2026-10-19): tells the
+  // feedback group what was changed so they can react to it. Editor field
+  // pilotNote = { heading, items: [...] }; omit it once the pilot ends.
+  const pilotNoteHtml = pilotNote?.items?.length
+    ? `
+  <tr><td style="padding:0 32px 20px 32px;">
+    <div style="font-family:'Helvetica Neue', Helvetica, Arial, sans-serif; font-weight:700; font-size:11px; letter-spacing:1.5px; color:${COLORS.darkBlue}; text-transform:uppercase; margin:0 0 6px 0;">${copy(pilotNote.heading || 'What changed this week')}</div>
+    ${pilotNote.items.map((i) => `<div style="font-family:Arial, sans-serif; font-size:14px; color:${COLORS.ink}; line-height:1.6; margin:0 0 4px 0; padding-left:14px; text-indent:-14px;">&bull;&nbsp; ${copy(i)}</div>`).join('\n    ')}
+  </td></tr>`
     : '';
 
   const surveyHtml = surveyUrl
@@ -332,37 +446,27 @@ export function buildBrandedHtml(data) {
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border:2px solid ${COLORS.lightBlue}; border-radius:8px;">
       <tr><td style="padding:18px 22px; text-align:center; font-family:Arial, sans-serif; font-size:14px; color:${COLORS.ink}; line-height:1.6;">
         <strong style="color:${COLORS.darkBlue};">The Signal is new and still taking shape.</strong><br>Tell us what helped and what to change. It takes about a minute.<br>
-        <a href="${escapeHtml(surveyUrl)}" style="display:inline-block; margin-top:10px; padding:10px 20px; background:${COLORS.darkBlue}; color:#ffffff; text-decoration:none; border-radius:4px; font-weight:bold;">Share your feedback</a>
+        <a href="${escapeHtml(surveyUrl)}" style="display:inline-block; margin-top:10px; padding:12px 24px; background:${COLORS.darkBlue}; color:#ffffff; text-decoration:none; border-radius:8px; box-shadow:0 2px 4px rgba(0,0,0,0.12); ${CONDENSED} font-weight:700; font-size:14px; letter-spacing:1px; text-transform:uppercase;">Share Your Feedback</a>
       </td></tr>
     </table>
   </td></tr>`
     : '';
 
   const html = `<!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="color-scheme" content="light dark">
 <title>The Signal: Week of ${formatWeek(week)}</title>
 </head>
 <body style="margin:0; padding:0; background:${COLORS.pageBg};">
-<div style="background:${COLORS.pageBg}; padding:32px 0; font-family:Arial, Helvetica, sans-serif;">
+${preheader ? `<div style="display:none; max-height:0; overflow:hidden; mso-hide:all;">${copy(preheader)}</div>\n` : ''}<div style="background:${COLORS.pageBg}; padding:32px 0; font-family:Arial, Helvetica, sans-serif;">
 <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" align="center" style="width:600px; max-width:600px; margin:0 auto; background:#ffffff;">
 
   <tr>
     <td style="background:${COLORS.darkBlue}; padding:28px 32px;">
-      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
-        <tr>
-          <td style="width:150px; vertical-align:middle;">
-            <img src="${logoSrc}" alt="Word of Life Fellowship" width="140" style="display:block; height:auto;">
-          </td>
-          <td style="text-align:right; vertical-align:middle;">
-            <div style="font-family:'Helvetica Neue', Helvetica, Arial, sans-serif; font-weight:700; font-size:11px; letter-spacing:3px; color:${COLORS.lightBlue}; text-transform:uppercase;">Word of Life Fellowship</div>
-          </td>
-        </tr>
-      </table>
-      <div style="margin-top:20px; font-family:'Helvetica Neue', Helvetica, Arial, sans-serif; font-weight:700; font-size:34px; letter-spacing:1px; color:#ffffff; text-transform:uppercase;">The Signal</div>
+      <img src="${logoSrc}" alt="Word of Life Fellowship" width="140" style="display:block; height:auto;">
+      <div style="margin-top:20px; ${CONDENSED} font-weight:700; font-size:38px; letter-spacing:1px; color:#ffffff; text-transform:uppercase;">The Signal</div>
       <div style="margin-top:4px; font-family:Arial, sans-serif; font-size:14px; color:${COLORS.lightBlue};">A weekly culture briefing for youth leaders and parents &middot; ${formatWeek(week)}</div>
       ${SHOW_CYA_ATTRIBUTION ? `<div style="margin-top:8px; font-family:Arial, sans-serif; font-size:11px; font-style:italic; color:rgba(255,255,255,0.65);">${CYA_ATTRIBUTION_TEXT}</div>` : ''}
     </td>
@@ -380,30 +484,29 @@ export function buildBrandedHtml(data) {
   </td></tr>
 
   ${sectionBadge('02', 'Heads Up')}
-  <tr><td style="padding:8px 32px 24px 32px;">
+  <tr><td style="padding:16px 32px 24px 32px;">
+    ${headsUpIntro ? `<div style="font-family:Arial, sans-serif; font-size:14px; color:${COLORS.ink}; line-height:1.6; margin-bottom:10px;">${copy(headsUpIntro)}</div>` : ''}
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
       ${headsUpHtml}
     </table>
   </td></tr>
 
-  <tr><td style="padding:4px 32px 0 32px; font-family:Arial, sans-serif; font-size:12px; color:${COLORS.inkSecondary}; line-height:1.5;">
-    The charts below show what is actually popular this week, as is. Tags are the publisher's own ratings (movie and TV ratings, Apple's explicit and age ratings, ESRB). No tag means no rating was available, not that a title is clean.
-  </td></tr>
+  ${chartsGroupHeader(CHART_SECTIONS[0], CHART_SECTIONS[CHART_SECTIONS.length - 1])}
 
-  ${sectionBadge('03', 'What Teens Are Watching')}
-  ${chartBlock('Movies – Trending This Week', scoredList(top(movies), { showYear: true }))}
-  ${chartBlock('TV – Trending This Week', scoredList(top(tv)))}
-  ${chartBlock('YouTube – Trending (US)', twoLineList(top(youtube), (v) => ({ title: v.title, meta: `${v.channel} – ${v.views} views` })), { last: true })}
+  ${sectionBadge(CHART_SECTIONS[0], 'What Teens Are Watching')}
+  ${chartBlock('Movies – Trending This Week', scoredList(top(movies), 'movie'))}
+  ${chartBlock('TV – Trending This Week', scoredList(top(tv), 'tv'))}
+  ${chartBlock('YouTube – Trending (US)', twoLineList(top(youtube), (v) => ({ title: v.title, meta: `${cleanText(v.channel)} – ${v.views} views` })), { last: true })}
 
-  ${sectionBadge('04', 'What Teens Are Hearing')}
-  ${chartBlock('Apple Music – Top Songs', plainList(top(appleMusic), (s) => `${listenLink(appleMusicUrl(s), escapeHtml(s.title))} – ${escapeHtml(s.artist)}`))}
-  ${chartBlock('Christian Songs', plainList(top(christian), (s) => `${listenLink(appleMusicUrl(s), escapeHtml(s.title))} – ${escapeHtml(s.artist)}`))}
-  ${chartBlock(`Apple Podcasts – Picks From This Week's Top ${podcasts?.length || 20}`, podcastRows.length ? plainList(podcastRows, (p) => listenLink(applePodcastUrl(p), escapeHtml(p.name))) : `<tr><td style="padding:8px 0; color:${COLORS.inkSecondary}; font-style:italic;">[EDITOR: pick up to 5 shows from the Top 20 (names only), skipping news and political talk]</td></tr>`, { last: true })}
+  ${sectionBadge(CHART_SECTIONS[1], 'What Teens Are Hearing')}
+  ${chartBlock('Apple Music – Top Songs', plainList(top(appleMusic), songLine, songListen))}
+  ${chartBlock('Christian Songs', plainList(top(christian), songLine, songListen))}
+  ${chartBlock(`Apple Podcasts – Picks From This Week's Top ${podcasts?.length || 20}`, podcastRows.length ? plainList(podcastRows, (p) => escapeHtml(cleanText(p.name)), (p) => listenLine(applePodcastUrl(p), 'Apple Podcasts', cleanText(p.name))) : `<tr><td style="padding:8px 0; color:${COLORS.inkSecondary}; font-style:italic;">[EDITOR: pick up to 5 shows from the Top 20 (names only), skipping news and political talk]</td></tr>`, { last: true })}
 
-  ${sectionBadge('05', 'What Teens Are Playing')}
-  ${chartBlock('Steam – Top Sellers', plainList(top(steam), (g) => escapeHtml(g.title)))}
-  ${chartBlock('App Store – Top Free Games', plainList(top(appleGames), (a) => `${escapeHtml(a.name)} <span style="color:${COLORS.inkSecondary};">– ${escapeHtml(a.developer)}</span>`))}
-  ${chartBlock('App Store – Top Free Apps', plainList(top(appleApps), (a) => `${escapeHtml(a.name)} <span style="color:${COLORS.inkSecondary};">– ${escapeHtml(a.category)}</span>`), { last: true })}
+  ${sectionBadge(CHART_SECTIONS[2], 'What Teens Are Playing')}
+  ${chartBlock('Steam – Top Sellers', plainList(top(steam), (g) => maybeLink(steamUrl(g), escapeHtml(cleanText(g.title))), null, { rated: true }))}
+  ${chartBlock('App Store – Top Free Games', plainList(top(appleGames), (a) => `${maybeLink(appStoreUrl(a), escapeHtml(cleanText(a.name)))} <span style="color:${COLORS.inkSecondary};">– ${escapeHtml(cleanText(a.developer))}</span>`, null, { rated: true }))}
+  ${chartBlock('App Store – Top Free Apps', plainList(top(appleApps), (a) => `${maybeLink(appStoreUrl(a), escapeHtml(cleanText(a.name)))} <span style="color:${COLORS.inkSecondary};">– ${escapeHtml(a.category)}</span>`, null, { rated: true }), { last: true })}
 
   ${socialPick ? `${sectionBadge('06', 'Trend Watch')}
   <tr><td style="padding:20px 32px 24px 32px;">
@@ -415,10 +518,11 @@ export function buildBrandedHtml(data) {
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${COLORS.darkBlue}; border-radius:8px;">
       <tr><td style="padding:24px 26px;">
         <div style="font-family:'Helvetica Neue', Helvetica, Arial, sans-serif; font-weight:700; font-size:11px; letter-spacing:1.5px; color:${COLORS.lightBlue}; text-transform:uppercase; margin-bottom:10px;">Worth Naming Out Loud</div>
-        <div style="font-family:Georgia, 'Noto Serif', serif; font-style:italic; font-size:16px; color:#ffffff; line-height:1.6;">"${escapeHtml(ministryAngle)}"</div>
+        <div style="font-family:Georgia, 'Noto Serif', serif; font-style:italic; font-size:16px; color:#ffffff; line-height:1.6;">${copy(ministryAngle)}</div>
       </td></tr>
     </table>
   </td></tr>
+${pilotNoteHtml}
 ${surveyHtml}
 
   <tr>
