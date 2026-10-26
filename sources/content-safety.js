@@ -31,7 +31,8 @@ const BLOCK_PATTERNS = [
   // the editor to trip over. Covers common spellings/censored variants
   // (f*ck, fuk, sh1t, etc.) without matching innocent words (scunthorpe-safe:
   // word boundaries, no bare "ass" or "hell").
-  /\bf+[u\*@#]+c*k+(ing|ed|er|ers|s)?\b/i,
+  // No trailing \b: compounds like "Fuckoffening" leaked 2026-10-26.
+  /\bf+[u\*@#]+c+k/i,
   /\bfuk+(ing|ed|er)?\b/i,
   /\b(bull|horse|dog)?sh[i1\*]+t+(ty|s|ted|ting|head|post|posts|posting)?\b/i,
   /\bb[i1\*]tch(es|y|ing)?\b/i,
@@ -55,7 +56,8 @@ const BLOCK_PATTERNS = [
 // Harris" to a youth-pastor audience does.
 const POLITICS_PATTERNS = [
   /\bpolitic(s|al|ian|ians)?\b/i,
-  /\b(trump|biden|harris|obama|vance|walz|pelosi|aoc|desantis|newsom|musk|rfk)\b/i,
+  // hasan/piker added 2026-10-26 (political streamer quote leaked into r/GenZ candidates).
+  /\b(trump|biden|harris|obama|vance|walz|pelosi|aoc|desantis|newsom|musk|rfk|hasan piker|piker)\b/i,
   /\b(democrat|democrats|republican|republicans|gop|maga|libs?|liberal|liberals|conservative|conservatives|leftist|leftists|right-wing|left-wing|far-right|far-left|woke)\b/i,
   /\b(election|elections|ballot|voting|vote for|voter|voters|midterms?|primary election|presidential|president|congress|senate|senator|governor|supreme court|scotus|white house|capitol)\b/i,
   /\b(socialis[tm]s?|communis[tm]s?|marxis[tm]s?|fascis[tm]s?|nazis?|antifa)\b/i,

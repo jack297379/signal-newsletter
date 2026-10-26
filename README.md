@@ -205,3 +205,8 @@ Decided by John Yarosh 2026-10-09, starting with the first Pardot pilot issue (2
 
 - **Listen links.** Song titles (Apple Music and Christian Songs) and podcast picks are now links, so readers can quickly check a track or show for explicit content. Apple Music rows link to the song by id; Billboard rows link to an Apple Music search for title and artist; podcasts link to the show page (the source now keeps the Apple id and url) or fall back to an Apple Podcasts search.
 - **Title tidy.** All-caps multi-word movie and TV titles whose words are all 4+ letters display in title case ("LINK CLICK" becomes "Link Click"), after a reader took it for a broken link. Display only; editor picks still match the raw chart title. Short words and acronyms (FBI, WWE RAW) are left alone.
+
+## Changes 2026-10-26 (issue 3)
+
+- **"Why We Share This" footer.** Every issue now ends with Scott Foreman's statement (from his issue 2 survey response): the titles named are for awareness, not an endorsement by Word of Life Fellowship. It sits above the gray footer, in `WHY_WE_SHARE_THIS` in `template/build-html.js`. The Pardot template "The Signal - Weekly" carries the same block.
+- **Content filter gaps.** The profanity pattern dropped its trailing word boundary so compounds ("...offening") are caught, and it now requires the "c" so "Fukushima" is not blocked. "Hasan Piker" added to the political names. Both leaked into the 2026-10-26 Reddit candidates.

@@ -350,6 +350,10 @@ function findReal(index, name) {
 // {{EmailPreferenceCenter}} opens the Default Email Preferences Page, where the
 // public "The Signal" list (Pardot list 212761) can be unticked on its own;
 // {{Unsubscribe}} is a global opt-out from all WOL email (2026-10-09, Tim Hunt).
+// "Why We Share This" statement on every issue, Scott Foreman's wording from
+// his issue 2 survey response (2026-10-22), added from issue 3 (2026-10-27).
+const WHY_WE_SHARE_THIS = 'The Signal is intended to help parents, youth leaders, and ministry workers understand the media and cultural influences shaping today&rsquo;s teenagers. References to specific apps, games, movies, television programs, music, podcasts, websites, creators, or other content are provided for informational and awareness purposes only. Their inclusion does not constitute an endorsement, recommendation, or approval by Word of Life Fellowship. Readers are encouraged to exercise biblical discernment and make informed decisions consistent with their personal convictions and family values.';
+
 export function buildBrandedHtml(data) {
   const {
     week, movies, tv, youtube, appleMusic, christian,
@@ -524,6 +528,13 @@ ${preheader ? `<div style="display:none; max-height:0; overflow:hidden; mso-hide
   </td></tr>
 ${pilotNoteHtml}
 ${surveyHtml}
+
+  <tr>
+    <td style="padding:20px 32px 24px 32px; border-top:1px solid ${COLORS.hairline};">
+      <div style="font-family:'Helvetica Neue', Helvetica, Arial, sans-serif; font-weight:700; font-size:11px; letter-spacing:1.5px; color:${COLORS.darkBlue}; text-transform:uppercase; margin:0 0 6px 0;">Why We Share This</div>
+      <div style="font-family:Arial, sans-serif; font-size:12px; color:${COLORS.inkSecondary}; line-height:1.6;">${WHY_WE_SHARE_THIS}</div>
+    </td>
+  </tr>
 
   <tr>
     <td style="background:#414042; padding:24px 32px; text-align:center;">
