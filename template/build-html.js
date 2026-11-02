@@ -22,10 +22,16 @@ import { readFileSync } from 'fs';
 import { SHOW_CYA_ATTRIBUTION, CYA_ATTRIBUTION_TEXT } from './attribution.js';
 
 const WOL_LOGO_PATH =
-  "/Users/JohnYarosh/Library/CloudStorage/OneDrive-WordofLifeFellowshipInc/WOL NY Marketing Team - WOL_SecondBrain/resources/assets/logos/wol-fellowship/WOL logo_horizontal_white_(R).png";
+  "/Users/JohnYaroshwol.org/Library/CloudStorage/OneDrive-WordofLifeFellowshipInc/WOL NY Marketing Team - WOL_SecondBrain/resources/assets/logos/wol-fellowship/WOL logo_horizontal_white_(R).png";
+
+// Hero waveform watermark (Claude Design direction 2b, 2026-11-02): 1200x800
+// retina PNG with solid #004f68 baked in, shown at 600x400.
+const HERO_WAVE_PATH = new URL('./assets/signal-bg-wave.png', import.meta.url);
 
 const COLORS = {
   darkBlue: '#004f68',
+  darkerBlue: '#003d51',   // tint of darkBlue: attribution strip (hero 2026-11-02)
+  hairlineOnDark: '#2f7189', // tint of darkBlue: rule inside the hero band
   lightBlue: '#73d1f5',
   ink: '#414042',
   inkSecondary: '#6d6e71', // was #939598 (2.9:1 on white, fails AA); design review 2026-10-19
@@ -36,6 +42,15 @@ const COLORS = {
 
 function formatWeek(week) {
   const d = new Date(`${week}T00:00:00`);
+  return d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+}
+
+// The masthead shows the send date, not the pull date (John Yarosh,
+// 2026-11-02): `week` is the Monday the data is pulled, and the issue goes
+// out the next day, Tuesday 8:00 AM.
+function formatSendDate(week) {
+  const d = new Date(`${week}T00:00:00`);
+  d.setDate(d.getDate() + 1);
   return d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
 }
 
@@ -341,6 +356,13 @@ function findReal(index, name) {
  * @param {string|null} data.surveyUrl - pilot feedback survey link.
  * @param {string|null} data.logoUrl - hosted logo URL; REQUIRED for a real
  *   send (Outlook blocks base64 images). Omitted = base64 preview only.
+ * @param {string|null} data.heroBgUrl - hosted waveform URL for the hero
+ *   band; same rule as logoUrl. Clients that drop it show solid darkBlue.
+ * @param {number|null} data.issue - issue number for the masthead; omitted =
+ *   the masthead shows the date alone.
+ * @param {string|null} data.teaser - "This Week" hook in the hero, a short
+ *   condensed take on the Talk About It headline so it does not repeat word
+ *   for word. Falls back to talkAboutIt.headline.
  */
 // Footer merge tags use Pardot's Handlebars Merge Language ({{Unsubscribe}},
 // {{View_Online}}). Verified 2026-09-08 in WOL's own account: the classic
@@ -360,6 +382,7 @@ export function buildBrandedHtml(data) {
     steam, appleGames, appleApps, podcasts,
     talkAboutIt = null, headsUp = [], podcastPicks = [], ministryAngle, socialPick = null,
     surveyUrl = null, logoUrl = null, preheader = null, headsUpIntro = null, pilotNote = null,
+    heroBgUrl = null, issue = null, teaser = null,
   } = data;
 
   // Structural guardrails: the feature and the heads-up items must point at
@@ -398,6 +421,15 @@ export function buildBrandedHtml(data) {
       'Upload the logo to Pardot\'s image library and pass the resulting URL as logoUrl before sending.'
     );
     logoSrc = `data:image/png;base64,${readFileSync(WOL_LOGO_PATH).toString('base64')}`;
+  }
+
+  let heroBgSrc = heroBgUrl;
+  if (!heroBgSrc) {
+    console.warn(
+      'buildBrandedHtml: no heroBgUrl provided, embedding the hero waveform as a base64 data URI for preview purposes only. ' +
+      'Upload template/assets/signal-bg-wave.png to Pardot Files and pass the hi.wol.org URL as heroBgUrl before sending.'
+    );
+    heroBgSrc = `data:image/png;base64,${readFileSync(HERO_WAVE_PATH).toString('base64')}`;
   }
 
   const t = talkAboutIt || {};
@@ -456,29 +488,73 @@ export function buildBrandedHtml(data) {
   </td></tr>`
     : '';
 
+  // Hero hook (direction 2b, 2026-11-02): the editor's condensed teaser, else
+  // the Talk About It headline.
+  const heroTeaser = teaser
+    ? copy(teaser)
+    : (t.placeholder || !t.headline ? '[EDITOR: teaser, a condensed take on the Talk About It headline]' : copy(t.headline));
+
   const html = `<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>The Signal: Week of ${formatWeek(week)}</title>
+<title>The Signal: ${issue ? `Issue ${escapeHtml(issue)}, ${formatSendDate(week)}` : `Week of ${formatWeek(week)}`}</title>
 </head>
 <body style="margin:0; padding:0; background:${COLORS.pageBg};">
 ${preheader ? `<div style="display:none; max-height:0; overflow:hidden; mso-hide:all;">${copy(preheader)}</div>\n` : ''}<div style="background:${COLORS.pageBg}; padding:32px 0; font-family:Arial, Helvetica, sans-serif;">
 <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" align="center" style="width:600px; max-width:600px; margin:0 auto; background:#ffffff;">
 
   <tr>
-    <td style="background:${COLORS.darkBlue}; padding:28px 32px;">
-      <img src="${logoSrc}" alt="Word of Life Fellowship" width="140" style="display:block; height:auto;">
-      <div style="margin-top:20px; ${CONDENSED} font-weight:700; font-size:38px; letter-spacing:1px; color:#ffffff; text-transform:uppercase;">The Signal</div>
-      <div style="margin-top:4px; font-family:Arial, sans-serif; font-size:14px; color:${COLORS.lightBlue};">A weekly culture briefing for youth leaders and parents &middot; ${formatWeek(week)}</div>
-      ${SHOW_CYA_ATTRIBUTION ? `<div style="margin-top:8px; font-family:Arial, sans-serif; font-size:11px; font-style:italic; color:rgba(255,255,255,0.65);">${CYA_ATTRIBUTION_TEXT}</div>` : ''}
+    <td background="${heroBgSrc}" bgcolor="${COLORS.darkBlue}" valign="top" style="background-color:${COLORS.darkBlue}; background-image:url('${heroBgSrc}'); background-repeat:no-repeat; background-position:right top; background-size:600px 400px; padding:0;">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td style="padding:24px 32px 0 32px;">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+              <tr>
+                <td valign="middle" style="padding:0;">
+                  <img src="${logoSrc}" alt="Word of Life" width="120" height="22" style="display:block; width:120px; height:auto; border:0; font-family:Arial, sans-serif; font-size:13px; font-weight:bold; color:#ffffff;">
+                </td>
+                <td valign="middle" align="right" style="padding:0; font-family:Arial, sans-serif; font-size:12px; font-weight:bold; letter-spacing:1.5px; color:#ffffff; text-transform:uppercase; white-space:nowrap;">
+                  ${issue ? `Issue ${escapeHtml(issue)}&nbsp;&nbsp;<span style="color:${COLORS.lightBlue};">/</span>&nbsp;&nbsp;` : ''}${formatSendDate(week)}
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:22px 32px 0 32px;">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+              <tr><td style="border-top:1px solid ${COLORS.lightBlue}; font-size:0; line-height:0; height:1px;">&nbsp;</td></tr>
+            </table>
+            <div style="padding-top:18px; ${CONDENSED} font-weight:700; font-size:60px; line-height:60px; letter-spacing:2px; color:#ffffff; text-transform:uppercase;">The Signal</div>
+            <div style="padding-top:8px; font-family:Arial, sans-serif; font-size:15px; line-height:22px; color:${COLORS.lightBlue};">A weekly culture briefing for youth leaders and parents</div>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:24px 32px 28px 32px;">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+              <tr><td style="border-top:1px solid ${COLORS.hairlineOnDark}; font-size:0; line-height:0; height:1px;">&nbsp;</td></tr>
+              <tr>
+                <td style="padding-top:16px; font-family:'Helvetica Neue', Helvetica, Arial, sans-serif; font-weight:700; font-size:12px; letter-spacing:2px; color:${COLORS.lightBlue}; text-transform:uppercase;">This Week</td>
+              </tr>
+              <tr>
+                <td style="padding-top:6px; font-family:'Helvetica Neue', Helvetica, Arial, sans-serif; font-weight:700; font-size:22px; line-height:29px; color:#ffffff;">${heroTeaser}</td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>
     </td>
   </tr>
-
+${SHOW_CYA_ATTRIBUTION ? `
   <tr>
-    <td style="padding:24px 32px 8px 32px;">
-      <p style="margin:0; font-family:Arial, sans-serif; font-size:15px; line-height:1.6; color:${COLORS.ink};">Five minutes on what teens are watching, hearing, and playing this week, plus one thing worth talking about at home or in youth group.</p>
+    <td style="background:${COLORS.darkerBlue}; padding:10px 32px; font-family:Arial, sans-serif; font-size:12px; line-height:18px; color:#ffffff;">${CYA_ATTRIBUTION_TEXT}</td>
+  </tr>
+` : ''}
+  <tr>
+    <td style="padding:24px 32px 24px 32px;">
+      <p style="margin:0; font-family:Arial, sans-serif; font-size:15px; line-height:24px; color:${COLORS.ink};">Five minutes on what teens are watching, hearing, and playing this week, plus one thing worth talking about at home or in youth group.</p>
     </td>
   </tr>
 

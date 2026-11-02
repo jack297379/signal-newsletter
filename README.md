@@ -210,3 +210,10 @@ Decided by John Yarosh 2026-10-09, starting with the first Pardot pilot issue (2
 
 - **"Why We Share This" footer.** Every issue now ends with Scott Foreman's statement (from his issue 2 survey response): the titles named are for awareness, not an endorsement by Word of Life Fellowship. It sits above the gray footer, in `WHY_WE_SHARE_THIS` in `template/build-html.js`. The Pardot template "The Signal - Weekly" carries the same block.
 - **Content filter gaps.** The profanity pattern dropped its trailing word boundary so compounds ("...offening") are caught, and it now requires the "c" so "Fukushima" is not blocked. "Hasan Piker" added to the political names. Both leaked into the 2026-10-26 Reddit candidates.
+
+## Changes 2026-11-02 (issue 4: new hero)
+
+- **Hero redesign (Claude Design direction 2b).** The masthead is now a publication masthead: logo with "Issue N / date" on the top row, a 60px "The Signal" wordmark between hairlines, the tagline, and a "This Week" hook. A faint waveform watermark (`template/assets/signal-bg-wave.png`, hosted in Pardot Files as "The Signal hero wave", id 354909) sits behind the band; Outlook desktop and images-off clients show solid `#004f68`. The CYA attribution line moved to its own darker strip under the band (still off).
+- **New editor fields.** `issue` (masthead issue number) and `teaser` (the hero hook, a condensed take on the Talk About It headline so it does not repeat word for word; falls back to the headline).
+- **Masthead date is the send date.** It shows the Tuesday the issue goes out (pull date plus one day), not the Monday pull date (John Yarosh).
+- **Logo path fix.** `WOL_LOGO_PATH` (base64 preview only) points at the vault under the current macOS account.

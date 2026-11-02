@@ -25,6 +25,10 @@
 //   "preheader":    "..." | null,      // hidden inbox preview line (2026-10-19)
 //   "headsUpIntro": "..." | null,      // one line above the Heads Up list (2026-10-19)
 //   "pilotNote":    { "heading": "...", "items": ["..."] } | null  // pilot only, above the survey box
+//   "issue":        4 | null,          // masthead issue number (hero 2026-11-02)
+//   "teaser":       "..." | null       // hero "This Week" hook, a condensed take on
+//                                      // talkAboutIt.headline (no word-for-word repeat);
+//                                      // null falls back to the headline
 // }
 // Headlines must not assert counts the charts contradict; avoid exact counts.
 
@@ -39,9 +43,17 @@ import { buildBrandedHtml } from './template/build-html.js';
 const PARDOT_LOGO_URL =
   'https://hi.wol.org/l/343241/2023-08-21/29vq4n7/343241/16926289847HlVAsGQ/WOL_logo_horizontal_white__R_.png';
 
+// Hosted copy of the hero waveform (template/assets/signal-bg-wave.png) in
+// Pardot Files ("The Signal hero wave", file id 354909, /Fellowship/Files,
+// uploaded 2026-11-02). Set to null and the build embeds it as base64, which
+// is a preview only and must not be pasted into Pardot.
+const PARDOT_HERO_WAVE_URL =
+  'https://hi.wol.org/l/343241/2026-11-02/2bglddf/343241/1793646302HM5z9Wcd/signal_bg_wave.png';
+
 const flags = process.argv.slice(2).filter((a) => a.startsWith('--'));
 const arg = process.argv.slice(2).find((a) => !a.startsWith('--'));
 const logoUrl = flags.includes('--embed-logo') ? null : PARDOT_LOGO_URL;
+const heroBgUrl = flags.includes('--embed-logo') ? null : PARDOT_HERO_WAVE_URL;
 const week = arg || readdirSync('./output')
   .filter((f) => /^\d{4}-\d{2}-\d{2}\.json$/.test(f))
   .sort()
@@ -66,6 +78,7 @@ if (existsSync(editorPath)) {
 const html = buildBrandedHtml({
   ...data,
   logoUrl,
+  heroBgUrl,
   talkAboutIt: editor?.talkAboutIt || { placeholder: true },
   headsUp: editor?.headsUp || [{ placeholder: true, basedOn: '[EDITOR: exact chart title]', note: '[EDITOR: one plain sentence on why parents may want a closer look; only what the rating or data shows]' }],
   socialPick: editor ? editor.socialPick || null : null,
@@ -75,6 +88,8 @@ const html = buildBrandedHtml({
   preheader: editor?.preheader || null,
   headsUpIntro: editor?.headsUpIntro || null,
   pilotNote: editor?.pilotNote || null,
+  issue: editor?.issue || null,
+  teaser: editor?.teaser || null,
 });
 
 const outPath = `./output/${week}-design.html`;
